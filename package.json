@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=@sesh/web",
     "build": "npm run build --workspace=@sesh/web",
-    "lint": "npm run lint --workspace=@sesh/web"
+    "lint": "npm run lint --workspace=@sesh/web",
+    "test": "npm run test --workspace=@sesh/web"
   }
 }
