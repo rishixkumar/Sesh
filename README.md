@@ -11,13 +11,14 @@ Sesh is an npm workspaces monorepo. The Next.js frontend lives in `apps/web`; sh
 | Area | Status |
 | --- | --- |
 | Monorepo layout | ✅ npm workspaces (`apps/*`, `packages/*`) |
-| Frontend (`@sesh/web`) | ✅ Next.js app scaffolded and relocated |
+| Frontend (`@sesh/web`) | ✅ Next.js App Router + Tailwind CSS |
+| UI kit | ✅ shadcn/ui (`button`, `card`, `badge`, `input`, `dialog`) |
 | Shared packages | ⏳ reserved under `packages/` |
 | Backend | ⏳ planned |
 | Docs | ⏳ reserved under `docs/` |
 | Infra | ⏳ reserved under `infra/` |
 
-**Iteration complete:** frontend separated into `apps/web`, root configured as the workspace orchestrator.
+**Latest iteration:** shadcn/ui initialized in `@sesh/web` with the first set of reusable components.
 
 ---
 
@@ -27,12 +28,22 @@ Sesh is an npm workspaces monorepo. The Next.js frontend lives in `apps/web`; sh
 sesh/
 ├── apps/
 │   └── web/
+│       ├── components.json
 │       ├── public/
 │       ├── src/
-│       │   └── app/
-│       │       ├── globals.css
-│       │       ├── layout.tsx
-│       │       └── page.tsx
+│       │   ├── app/
+│       │   │   ├── globals.css
+│       │   │   ├── layout.tsx
+│       │   │   └── page.tsx
+│       │   ├── components/
+│       │   │   └── ui/
+│       │   │       ├── badge.tsx
+│       │   │       ├── button.tsx
+│       │   │       ├── card.tsx
+│       │   │       ├── dialog.tsx
+│       │   │       └── input.tsx
+│       │   └── lib/
+│       │       └── utils.ts
 │       ├── package.json
 │       ├── next.config.ts
 │       ├── tsconfig.json
@@ -77,8 +88,15 @@ Frontend dependencies live in `apps/web/package.json`. The root package keeps wo
 
 ### Prerequisites
 
-- Node.js (LTS recommended)
+- Node.js **≥ 22.13.0** (or `^20.19.0` / `≥ 24`) — required by `eslint-visitor-keys`
 - npm (workspaces are used by default)
+- **Recommended:** [nvm](https://github.com/nvm-sh/nvm) for local Node version management
+
+```bash
+nvm install 22
+nvm use 22
+node -v
+```
 
 ### Install
 
@@ -103,6 +121,14 @@ npm run build
 npm run lint
 ```
 
+### Security audit
+
+```bash
+npm audit
+```
+
+Current known findings (as of iteration 2): **7 moderate** vulnerabilities in the `minimatch` → `@typescript-eslint/*` chain. Fixes available via `npm audit fix`, but review before applying.
+
 ---
 
 ## Frontend (`apps/web`)
@@ -111,15 +137,40 @@ npm run lint
 | --- | --- |
 | Package name | `@sesh/web` |
 | Framework | Next.js (App Router) |
-| Styling | Tailwind CSS |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Component primitives | Radix (`radix-nova` style) |
+| Base color | Zinc |
 | Language | TypeScript |
 | Import alias | `@/*` → `./src/*` |
 
-Primary entry points:
+### UI components
+
+Reusable primitives live in `apps/web/src/components/ui` (solo-project simplicity; extract to `packages/` later if a second frontend needs them):
+
+| Component | Path |
+| --- | --- |
+| Button | `src/components/ui/button.tsx` |
+| Card | `src/components/ui/card.tsx` |
+| Badge | `src/components/ui/badge.tsx` |
+| Input | `src/components/ui/input.tsx` |
+| Dialog | `src/components/ui/dialog.tsx` |
+
+Helpers:
+
+- `src/lib/utils.ts` — `cn()` class-name utility
+- `components.json` — shadcn/ui configuration
+
+Primary app entry points:
 
 - `apps/web/src/app/page.tsx` — home page
 - `apps/web/src/app/layout.tsx` — root layout
-- `apps/web/src/app/globals.css` — global styles
+- `apps/web/src/app/globals.css` — theme tokens + global styles
+
+Add more components from `apps/web`:
+
+```bash
+npx shadcn@latest add <component>
+```
 
 ---
 
@@ -128,6 +179,7 @@ Primary entry points:
 | Iteration | Summary |
 | --- | --- |
 | **1 — Monorepo bootstrap** | Moved the Next.js app into `apps/web`, added npm workspaces at the root, and split frontend dependencies into `@sesh/web`. |
+| **2 — shadcn/ui foundation** | Initialized shadcn/ui in `@sesh/web` (Zinc base) and added `button`, `card`, `badge`, `input`, and `dialog`. Build and lint verified. |
 
 ---
 
@@ -135,5 +187,6 @@ Primary entry points:
 
 - Prefer changes inside the relevant workspace (`apps/web`, future `packages/*`, etc.).
 - Keep the root `package.json` free of app-specific dependencies.
+- Keep UI components under `apps/web/src/components/ui` until a second consumer justifies a shared package.
 - Update this README when a major iteration lands (new app, package, backend, infra, or docs structure).
 - See `AGENTS.md` for agent-oriented Next.js guidance in this repo.

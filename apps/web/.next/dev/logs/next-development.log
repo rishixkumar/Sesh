@@ -1,5 +1,7 @@
-{"timestamp":"00:00:01.008","source":"Server","level":"LOG","message":"- Cache Components enabled"}
-{"timestamp":"00:00:01.009","source":"Server","level":"LOG","message":"- Partial Prefetching enabled"}
-{"timestamp":"00:00:01.009","source":"Server","level":"LOG","message":""}
-{"timestamp":"00:00:03.212","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
-{"timestamp":"00:00:37.364","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:00.856","source":"Server","level":"LOG","message":"- Cache Components enabled"}
+{"timestamp":"00:00:00.856","source":"Server","level":"LOG","message":"- Partial Prefetching enabled"}
+{"timestamp":"00:00:00.856","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:00.857","source":"Server","level":"LOG","message":"✓ Generated AGENTS.md for AI agents. Set `agentRules: false` in next.config to disable."}
+{"timestamp":"00:00:02.240","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:06.478","source":"Browser","level":"INFO","message":"Download the React DevTools for a better development experience: https://react.dev/link/react-devtools"}
+{"timestamp":"00:00:34.296","source":"Server","level":"LOG","message":"  Turbopack has seen frequent file updates and is waiting for the filesystem to settle (0.5s elapsed so far; last modified: \"/Users/rishikumar/Desktop/sesh/node_modules/next/dist/esm/build/templates\")."}
