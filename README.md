@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sesh
 
-## Getting Started
+Sesh is an npm workspaces monorepo. The Next.js frontend lives in `apps/web`; shared packages, docs, and infrastructure will land in their own top-level folders as the project grows.
 
-First, run the development server:
+> **Living document** — this README is updated after every major iteration so it always reflects the current shape of the repo.
+
+---
+
+## Current status
+
+| Area | Status |
+| --- | --- |
+| Monorepo layout | ✅ npm workspaces (`apps/*`, `packages/*`) |
+| Frontend (`@sesh/web`) | ✅ Next.js app scaffolded and relocated |
+| Shared packages | ⏳ reserved under `packages/` |
+| Backend | ⏳ planned |
+| Docs | ⏳ reserved under `docs/` |
+| Infra | ⏳ reserved under `infra/` |
+
+**Iteration complete:** frontend separated into `apps/web`, root configured as the workspace orchestrator.
+
+---
+
+## Repository structure
+
+```text
+sesh/
+├── apps/
+│   └── web/
+│       ├── public/
+│       ├── src/
+│       │   └── app/
+│       │       ├── globals.css
+│       │       ├── layout.tsx
+│       │       └── page.tsx
+│       ├── package.json
+│       ├── next.config.ts
+│       ├── tsconfig.json
+│       └── eslint.config.mjs
+├── packages/
+├── docs/
+├── infra/
+├── .gitignore
+├── AGENTS.md
+├── README.md
+├── package.json
+└── package-lock.json
+```
+
+### What each top-level folder is for
+
+| Path | Role |
+| --- | --- |
+| `apps/` | Deployable applications. Right now: `@sesh/web` (Next.js). |
+| `packages/` | Shared libraries and tooling used across apps. |
+| `docs/` | Project documentation beyond this README. |
+| `infra/` | Infrastructure and deployment configuration. |
+| Root `package.json` | Workspace root — scripts and workspace wiring only. |
+
+---
+
+## Workspaces
+
+Root scripts proxy into the web app workspace:
+
+| Script | What it runs |
+| --- | --- |
+| `npm run dev` | `next dev` in `@sesh/web` |
+| `npm run build` | `next build` in `@sesh/web` |
+| `npm run lint` | `eslint .` in `@sesh/web` |
+
+Frontend dependencies live in `apps/web/package.json`. The root package keeps workspace config and orchestration scripts only.
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Node.js (LTS recommended)
+- npm (workspaces are used by default)
+
+### Install
+
+From the repo root:
+
+```bash
+npm install
+```
+
+### Develop
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Edits under `apps/web/src/app/` hot-reload.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build & lint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run lint
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Frontend (`apps/web`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Detail | Value |
+| --- | --- |
+| Package name | `@sesh/web` |
+| Framework | Next.js (App Router) |
+| Styling | Tailwind CSS |
+| Language | TypeScript |
+| Import alias | `@/*` → `./src/*` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Primary entry points:
 
-## Deploy on Vercel
+- `apps/web/src/app/page.tsx` — home page
+- `apps/web/src/app/layout.tsx` — root layout
+- `apps/web/src/app/globals.css` — global styles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Changelog of major iterations
+
+| Iteration | Summary |
+| --- | --- |
+| **1 — Monorepo bootstrap** | Moved the Next.js app into `apps/web`, added npm workspaces at the root, and split frontend dependencies into `@sesh/web`. |
+
+---
+
+## Notes for contributors & agents
+
+- Prefer changes inside the relevant workspace (`apps/web`, future `packages/*`, etc.).
+- Keep the root `package.json` free of app-specific dependencies.
+- Update this README when a major iteration lands (new app, package, backend, infra, or docs structure).
+- See `AGENTS.md` for agent-oriented Next.js guidance in this repo.
