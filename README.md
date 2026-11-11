@@ -2,7 +2,7 @@
 
 Sesh is an npm workspaces monorepo. The Next.js frontend lives in `apps/web`; shared packages, docs, and infrastructure will land in their own top-level folders as the project grows.
 
-> **Living document** — this README is updated after every major iteration so it always reflects the current shape of the repo.
+> **Living document** — progress is tracked as **Milestone.iteration** (for example `0.1`, `0.2`). New entries are added only when explicitly requested.
 
 ---
 
@@ -18,7 +18,7 @@ Sesh is an npm workspaces monorepo. The Next.js frontend lives in `apps/web`; sh
 | Docs | ⏳ reserved under `docs/` |
 | Infra | ⏳ reserved under `infra/` |
 
-**Latest iteration:** shadcn/ui initialized in `@sesh/web` with the first set of reusable components.
+**Latest documented:** Milestone **0** · iteration **0.2**
 
 ---
 
@@ -127,7 +127,7 @@ npm run lint
 npm audit
 ```
 
-Current known findings (as of iteration 2): **7 moderate** vulnerabilities in the `minimatch` → `@typescript-eslint/*` chain. Fixes available via `npm audit fix`, but review before applying.
+Current known findings (as of **0.2**): **7 moderate** vulnerabilities in the `minimatch` → `@typescript-eslint/*` chain. Fixes available via `npm audit fix`, but review before applying.
 
 ---
 
@@ -174,12 +174,16 @@ npx shadcn@latest add <component>
 
 ---
 
-## Changelog of major iterations
+## Milestones
 
-| Iteration | Summary |
-| --- | --- |
-| **1 — Monorepo bootstrap** | Moved the Next.js app into `apps/web`, added npm workspaces at the root, and split frontend dependencies into `@sesh/web`. |
-| **2 — shadcn/ui foundation** | Initialized shadcn/ui in `@sesh/web` (Zinc base) and added `button`, `card`, `badge`, `input`, and `dialog`. Build and lint verified. |
+Progress is documented as **Milestone.iteration**. Milestone **0** covers foundational setup before product features.
+
+### Milestone 0 — Foundation
+
+| ID | Title | Summary |
+| --- | --- | --- |
+| **0.1** | Monorepo bootstrap | Moved the Next.js app into `apps/web`, added npm workspaces at the root, and split frontend dependencies into `@sesh/web`. |
+| **0.2** | shadcn/ui foundation | Initialized shadcn/ui in `@sesh/web` (Zinc base) and added `button`, `card`, `badge`, `input`, and `dialog`. Build and lint verified. |
 
 ---
 
@@ -188,5 +192,5 @@ npx shadcn@latest add <component>
 - Prefer changes inside the relevant workspace (`apps/web`, future `packages/*`, etc.).
 - Keep the root `package.json` free of app-specific dependencies.
 - Keep UI components under `apps/web/src/components/ui` until a second consumer justifies a shared package.
-- Update this README when a major iteration lands (new app, package, backend, infra, or docs structure).
+- Do **not** add README milestone/iteration entries unless the project owner explicitly asks.
 - See `AGENTS.md` for agent-oriented Next.js guidance in this repo.
