@@ -117,6 +117,42 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@keyframes landing-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes landing-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(236, 72, 153, 0.75));
+  }
+}
+
+.landing-ripple {
+  animation: landing-ripple 1.6s cubic-bezier(0.22, 1, 0.36, 1) 2 both;
+}
+
+.landing-glow {
+  animation: landing-glow 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-ripple,
+  .landing-glow {
+    animation: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -4,7 +4,6 @@ import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { SeshProvider } from "@/lib/context/sesh-provider";
-import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,7 +45,7 @@ export default function RootLayout({
         >
           <TooltipProvider>
             <SeshProvider>
-              <AppShell>{children}</AppShell>
+              {children}
               <Toaster />
             </SeshProvider>
           </TooltipProvider>
