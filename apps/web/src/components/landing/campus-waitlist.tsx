@@ -92,7 +92,7 @@ export function CampusWaitlist() {
                 onChange={(e) => setEmail(e.target.value)}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? "waitlist-error" : undefined}
-                className="h-12 flex-1 rounded-full border border-white/15 bg-white/5 px-5 text-base text-white placeholder:text-white/35 focus:border-fuchsia-400/60 focus:outline-none"
+                className="h-12 rounded-full sm:flex-1 border border-white/15 bg-white/5 px-5 text-base text-white placeholder:text-white/35 focus:border-fuchsia-400/60 focus:outline-none"
               />
               <label className="sr-only" htmlFor="waitlist-school">
                 School
