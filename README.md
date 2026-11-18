@@ -75,6 +75,7 @@ sesh/
 │       │   │   ├── context/
 │       │   │   ├── data/
 │       │   │   ├── events/
+│       │   │   ├── landing/
 │       │   │   ├── mock/
 │       │   │   ├── move-groups/
 │       │   │   ├── notifications/
@@ -182,6 +183,7 @@ npm run build
 | Framework | Next.js 16.4.6 (App Router, Cache Components + Partial Prerendering) |
 | Styling | Tailwind CSS v4 + shadcn/ui (`radix-nova`, Zinc base) |
 | Forms & validation | React Hook Form + Zod v4 |
+| Scroll animation (M2) | Motion (`motion/react` scroll-linked transforms) + Lenis smooth scroll |
 | Timezone convention | Stored as UTC ISO strings · displayed in `America/New_York` (ET) |
 | Persistence (M1) | Centralized `SeshDataAdapter` (`LocalMockSeshAdapter` + `localStorage`) |
 | Unit testing | Vitest + React Testing Library (`src/lib/__tests__/milestone1.test.ts`) |
@@ -222,6 +224,14 @@ Coordinated over shared domain models (`src/types/domain.ts`), `America/New_York
 | **[1.04](./docs/milestones/milestone-1/1.04-create-edit-move/README.md)** | Create & Edit a Move | Built `/events/new` and `/events/[id]/edit` with React Hook Form + Zod v4 validation, audience & address-privacy controls, General vs. Unlocked live preview, and browser-local Save Draft / Publish workflows. | [`1.04.1` – `1.04.4` Manual](./docs/milestones/milestone-1/1.04-create-edit-move/README.md) · [`Folder`](./docs/milestones/milestone-1/1.04-create-edit-move/) |
 | **[1.05](./docs/milestones/milestone-1/1.05-move-groups/README.md)** | Move Groups | Implemented `/move-groups/new`, `/move-groups/[id]`, and `/move-groups/[id]/manage` with privacy-projected roster masking, members-only chat links, request/approve/decline/leave/remove/disband flows, and owner-only guards. | [`1.05.1` – `1.05.4` Manual](./docs/milestones/milestone-1/1.05-move-groups/README.md) · [`Folder`](./docs/milestones/milestone-1/1.05-move-groups/) |
 | **[1.06](./docs/ds-algorithms/README.md)** | Data Structures & Algorithms | Rebuilt the domain layer on reusable, tested structures with byte-identical viewer behavior: hash-map indexes with cache invalidation, a friendship graph with BFS friend suggestions, single-pass RSVP aggregation, a composable filter pipeline with stable comparators, a suffix-trie search index (Hub + Friends people search), and a binary-heap `ActivityFeed` for `/notifications`. | [`DS-01` – `DS-06` Manual](./docs/ds-algorithms/README.md) · [`Folder`](./docs/ds-algorithms/) |
+
+### Milestone 2 — Landing Page & First-Visit Experience
+
+Built on the Milestone 1 frontend as a single-track iteration (branch `HomePage`, merged into `Production`): an Apple-style scroll story that introduces Sesh to first-time visitors, using Motion scroll-linked animation and Lenis smooth scrolling, with a static `prefers-reduced-motion` fallback and real HTML text for SEO and screen readers:
+
+| ID | Title | Summary | Implementation |
+| --- | --- | --- | --- |
+| **[2.01](./apps/web/src/components/landing/)** | Landing Page (`/welcome`) | Built a scroll-driven intro at `/welcome`: an SVG logo stroke-draw loader tied to real asset readiness (1.1 s min, 1.8 s cap), a word-by-word hook statement, a pinned phone mockup that scrubs through five chapters (live feed, Move Groups, audience picker, expiring location sharing, host flow + share card), guardrails, a campus waitlist (browser-local until a backend exists), and a final *Enter Sesh* / guest CTA. `proxy.ts` sends `/` to `/welcome` only when the `sesh_intro_seen` cookie is missing, a persistent *Skip intro* button is always visible, and existing pages moved into an `(app)` route group so the landing page renders without the app shell (URLs unchanged). | [`components/landing/`](./apps/web/src/components/landing/) · [`lib/landing/`](./apps/web/src/lib/landing/) · [`app/welcome/`](./apps/web/src/app/welcome/page.tsx) · [`proxy.ts`](./apps/web/src/proxy.ts) |
 
 ---
 
