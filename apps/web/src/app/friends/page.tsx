@@ -28,7 +28,11 @@ import {
 } from "@/components/ui/card";
 import { useSesh } from "@/lib/context/sesh-provider";
 import { SEED_USERS } from "@/lib/mock/seed";
+import { FriendshipGraph } from "@/lib/social/friendship-graph";
 import { CAMPUS_NAME } from "@/types/domain";
+
+const CAMPUS_FRIENDSHIP_GRAPH = FriendshipGraph.fromUsers(SEED_USERS);
+const SUGGESTION_SEARCH_DEPTH = 3;
 
 export default function FriendsNetworkPage() {
   const {
@@ -50,15 +54,28 @@ export default function FriendsNetworkPage() {
     [availableDemoUsers]
   );
 
-  const { friends, nonFriendCampusUsers } = useMemo(() => {
+  const { friends, nonFriendCampusUsers, mutualCountById } = useMemo(() => {
     if (viewer.mode !== "MEMBER") {
-      return { friends: [], nonFriendCampusUsers: SEED_USERS };
+      return {
+        friends: [],
+        nonFriendCampusUsers: SEED_USERS,
+        mutualCountById: new Map<string, number>(),
+      };
     }
-    const friendIdSet = new Set(viewer.user.friendIds);
+    const { friends, others } = CAMPUS_FRIENDSHIP_GRAPH.partition(
+      viewer.user.id,
+      SEED_USERS
+    );
+    const suggestions = CAMPUS_FRIENDSHIP_GRAPH.suggestFriends(viewer.user.id, {
+      maxDepth: SUGGESTION_SEARCH_DEPTH,
+    });
+    const rankById = new Map(suggestions.map((s, rank) => [s.userId, rank]));
+    const rankOf = (id: string) => rankById.get(id) ?? rankById.size;
     return {
-      friends: SEED_USERS.filter((u) => friendIdSet.has(u.id)),
-      nonFriendCampusUsers: SEED_USERS.filter(
-        (u) => u.id !== viewer.user.id && !friendIdSet.has(u.id)
+      friends,
+      nonFriendCampusUsers: others.toSorted((a, b) => rankOf(a.id) - rankOf(b.id)),
+      mutualCountById: new Map(
+        suggestions.map((s) => [s.userId, s.mutualFriendIds.length])
       ),
     };
   }, [viewer]);
@@ -345,13 +362,15 @@ export default function FriendsNetworkPage() {
                 <span className="font-medium text-foreground">
                   &ldquo;+1 other member&rdquo;
                 </span>
-                ) unless they are the group creator.
+                ) unless they are the group creator. Ordered by mutual friends,
+                then by how many hops away they are in your network.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {nonFriendCampusUsers.map((campusUser) => {
                 const isSwitchable = switchableIds.has(campusUser.id);
+                const mutualCount = mutualCountById.get(campusUser.id) ?? 0;
                 return (
                   <Card
                     key={campusUser.id}
@@ -369,7 +388,10 @@ export default function FriendsNetworkPage() {
                             <ShieldCheckIcon className="size-3 shrink-0 text-muted-foreground" />
                           </div>
                           <p className="truncate text-[11px] text-muted-foreground">
-                            @{campusUser.username} · Not in friend list
+                            @{campusUser.username} ·{" "}
+                            {mutualCount > 0
+                              ? `${mutualCount} mutual ${mutualCount === 1 ? "friend" : "friends"}`
+                              : "Not in friend list"}
                           </p>
                         </div>
                       </div>
