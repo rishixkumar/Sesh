@@ -10,15 +10,15 @@
  * @milestone    Milestone 1 — Frontend-Only Campus Social Coordination Prototype (Georgia Tech)
  * @agent        Feature Agent 03 ("Event Detail")
  * @iterations   1.03.1, 1.03.2, 1.03.3, 1.03.4
- * @owner        apps/web/src/app/events/[id]/*, apps/web/src/components/events/*
+ * @owner        web/src/app/(app)/events/[id]/*, web/src/components/events/*
  * @status       SHIPPED (Zero TypeScript / ESLint errors; Next.js 16.4.6 Cache Components verified)
  * @runtime      Next.js 16.4.6 App Router (`cacheComponents: true`, `partialPrefetching: true`), React 19.3.0
  * @timezone     America/New_York (Georgia Tech & Midtown Atlanta campus wall-clock standard)
- * @see          apps/web/src/types/domain.ts
- * @see          apps/web/src/lib/data/adapter.ts
- * @see          apps/web/src/lib/permissions/policies.ts
- * @see          apps/web/src/lib/context/sesh-provider.tsx
- * @see          apps/web/src/lib/dates.ts
+ * @see          web/src/types/domain.ts
+ * @see          web/src/lib/data/adapter.ts
+ * @see          web/src/lib/permissions/policies.ts
+ * @see          web/src/lib/context/sesh-provider.tsx
+ * @see          web/src/lib/dates.ts
  */
 ```
 
@@ -38,14 +38,14 @@
    - [3.3 Sub-Iteration `1.03.3` — Hook Dependency Cleanup & Render Determinism Audit](#33-sub-iteration-1033--hook-dependency-cleanup--render-determinism-audit)
    - [3.4 Sub-Iteration `1.03.4` — Move Groups Section Heading Polish & Next.js 16 Cached Metadata Verification](#34-sub-iteration-1034--move-groups-section-heading-polish--nextjs-16-cached-metadata-verification)
 4. [TSDoc / Javadoc API & Component Reference](#4-tsdoc--javadoc-api--component-reference)
-   - [4.1 `apps/web/src/app/events/[id]/page.tsx`](#41-appswebsrcappeventsidpagetsx)
-   - [4.2 `apps/web/src/app/events/[id]/not-found.tsx`](#42-appswebsrcappeventsidnot-foundtsx)
-   - [4.3 `apps/web/src/components/events/event-detail-view.tsx`](#43-appswebsrccomponentseventsevent-detail-viewtsx)
-   - [4.4 `apps/web/src/components/events/rsvp-controls.tsx`](#44-appswebsrccomponentseventsrsvp-controlstsx)
-   - [4.5 `apps/web/src/components/events/friends-going-card.tsx`](#45-appswebsrccomponentseventsfriends-going-cardtsx)
-   - [4.6 `apps/web/src/components/events/event-move-groups-section.tsx`](#46-appswebsrccomponentseventsevent-move-groups-sectiontsx)
-   - [4.7 `apps/web/src/components/events/share-event-button.tsx`](#47-appswebsrccomponentseventsshare-event-buttontsx)
-   - [4.8 `apps/web/src/components/events/report-event-dialog.tsx`](#48-appswebsrccomponentseventsreport-event-dialogtsx)
+   - [4.1 `web/src/app/(app)/events/[id]/page.tsx`](#41-appswebsrcappeventsidpagetsx)
+   - [4.2 `web/src/app/(app)/events/[id]/not-found.tsx`](#42-appswebsrcappeventsidnot-foundtsx)
+   - [4.3 `web/src/components/events/event-detail-view.tsx`](#43-appswebsrccomponentseventsevent-detail-viewtsx)
+   - [4.4 `web/src/components/events/rsvp-controls.tsx`](#44-appswebsrccomponentseventsrsvp-controlstsx)
+   - [4.5 `web/src/components/events/friends-going-card.tsx`](#45-appswebsrccomponentseventsfriends-going-cardtsx)
+   - [4.6 `web/src/components/events/event-move-groups-section.tsx`](#46-appswebsrccomponentseventsevent-move-groups-sectiontsx)
+   - [4.7 `web/src/components/events/share-event-button.tsx`](#47-appswebsrccomponentseventsshare-event-buttontsx)
+   - [4.8 `web/src/components/events/report-event-dialog.tsx`](#48-appswebsrccomponentseventsreport-event-dialogtsx)
 5. [Regression, Security & Debugging Checklist](#5-regression-security--debugging-checklist)
    - [5.1 Privacy & Information-Leakage Invariants](#51-privacy--information-leakage-invariants)
    - [5.2 OpenGraph & Server Metadata Leak Checks](#52-opengraph--server-metadata-leak-checks)
@@ -65,14 +65,14 @@ All implementation work in `1.03` is strictly isolated to the 8 files below so p
 
 | # | Workspace-Relative File Path | Execution Boundary | Primary Exports | Line Count |
 | :- | :--- | :--- | :--- | --: |
-| 1 | `apps/web/src/app/events/[id]/page.tsx` | Server Component + `"use cache"` helper | `generateMetadata`, `default EventDetailPage` (internal: `buildCachedPublicMetadata`, `EventDetailLoader`) | 61 |
-| 2 | `apps/web/src/app/events/[id]/not-found.tsx` | Server Component | `default EventNotFound` | 30 |
-| 3 | `apps/web/src/components/events/event-detail-view.tsx` | Client Component (`"use client"`) | `EventDetailView`, `EventDetailViewProps` | 619 |
-| 4 | `apps/web/src/components/events/rsvp-controls.tsx` | Client Component (`"use client"`) | `RsvpControls`, `RsvpControlsProps` | 162 |
-| 5 | `apps/web/src/components/events/friends-going-card.tsx` | Client Component (`"use client"`) | `FriendsGoingCard`, `FriendsGoingCardProps` | 130 |
-| 6 | `apps/web/src/components/events/event-move-groups-section.tsx` | Client Component (`"use client"`) | `EventMoveGroupsSection`, `EventMoveGroupsSectionProps` | 372 |
-| 7 | `apps/web/src/components/events/share-event-button.tsx` | Client Component (`"use client"`) | `ShareEventButton`, `ShareEventButtonProps` | 106 |
-| 8 | `apps/web/src/components/events/report-event-dialog.tsx` | Client Component (`"use client"`) | `ReportEventDialog`, `ReportEventDialogProps` | 152 |
+| 1 | `web/src/app/(app)/events/[id]/page.tsx` | Server Component + `"use cache"` helper | `generateMetadata`, `default EventDetailPage` (internal: `buildCachedPublicMetadata`, `EventDetailLoader`) | 61 |
+| 2 | `web/src/app/(app)/events/[id]/not-found.tsx` | Server Component | `default EventNotFound` | 30 |
+| 3 | `web/src/components/events/event-detail-view.tsx` | Client Component (`"use client"`) | `EventDetailView`, `EventDetailViewProps` | 619 |
+| 4 | `web/src/components/events/rsvp-controls.tsx` | Client Component (`"use client"`) | `RsvpControls`, `RsvpControlsProps` | 162 |
+| 5 | `web/src/components/events/friends-going-card.tsx` | Client Component (`"use client"`) | `FriendsGoingCard`, `FriendsGoingCardProps` | 130 |
+| 6 | `web/src/components/events/event-move-groups-section.tsx` | Client Component (`"use client"`) | `EventMoveGroupsSection`, `EventMoveGroupsSectionProps` | 372 |
+| 7 | `web/src/components/events/share-event-button.tsx` | Client Component (`"use client"`) | `ShareEventButton`, `ShareEventButtonProps` | 106 |
+| 8 | `web/src/components/events/report-event-dialog.tsx` | Client Component (`"use client"`) | `ReportEventDialog`, `ReportEventDialogProps` | 152 |
 
 ---
 
@@ -142,7 +142,7 @@ All implementation work in `1.03` is strictly isolated to the 8 files below so p
 
 ### 2.2 Next.js 16 `cacheComponents` & Async `params` Mechanics
 
-`apps/web/next.config.ts` enables Next.js 16.4.6 Cache Components (`cacheComponents: true`, replacing legacy Partial Prerendering flags). Under this architecture, Next.js enforces two strict invariants on dynamic route segments such as `src/app/events/[id]/page.tsx`:
+`web/next.config.ts` enables Next.js 16.4.6 Cache Components (`cacheComponents: true`, replacing legacy Partial Prerendering flags). Under this architecture, Next.js enforces two strict invariants on dynamic route segments such as `src/app/events/[id]/page.tsx`:
 
 1. **No Unwrapped Runtime Reads in Page Body**: `params` is a `Promise<{ id: string }>`. Awaiting `params` at the top level of `EventDetailPage` outside a `<Suspense>` boundary blocks static shell prerendering and triggers a Next.js 16 dynamic-IO validation error. Therefore, `EventDetailPage` is a **synchronous** Server Component that immediately emits the outer layout container and `<Suspense fallback={<DetailPageSkeleton />}>`, passing the unawaited `params` Promise into the async child Server Component `EventDetailLoader`.
 2. **No Runtime Promises Inside `"use cache"` Scopes**: Placing `"use cache"` directly inside `generateMetadata({ params })` causes Next.js to capture the request-time `params` Promise inside a cache scope. During build/prerender, Next.js throws or times out after 50 seconds with:
@@ -195,7 +195,7 @@ This creates a subtle client/server split:
 - **Reference Upstream Contract Inspected**:
 
 ```ts
-// Inspected from apps/web/src/lib/data/adapter.ts
+// Inspected from web/src/lib/data/adapter.ts
 export type EventLookupResult =
   | { status: "OK"; event: EventView }
   | { status: "RESTRICTED"; reason: string }
@@ -218,14 +218,14 @@ export function getServerSafePublicEventMetadata(
 
 - **Objective**: Implement all 8 owned Event Detail files covering the route entry, not-found boundary, main detail view, RSVP controls, friends-going social proof card, associated Move Groups section, share button, and simulated moderation report dialog.
 - **Files Touched**:
-  - `apps/web/src/app/events/[id]/page.tsx` (created)
-  - `apps/web/src/app/events/[id]/not-found.tsx` (created)
-  - `apps/web/src/components/events/event-detail-view.tsx` (created)
-  - `apps/web/src/components/events/rsvp-controls.tsx` (created)
-  - `apps/web/src/components/events/friends-going-card.tsx` (created)
-  - `apps/web/src/components/events/event-move-groups-section.tsx` (created)
-  - `apps/web/src/components/events/share-event-button.tsx` (created)
-  - `apps/web/src/components/events/report-event-dialog.tsx` (created)
+  - `web/src/app/(app)/events/[id]/page.tsx` (created)
+  - `web/src/app/(app)/events/[id]/not-found.tsx` (created)
+  - `web/src/components/events/event-detail-view.tsx` (created)
+  - `web/src/components/events/rsvp-controls.tsx` (created)
+  - `web/src/components/events/friends-going-card.tsx` (created)
+  - `web/src/components/events/event-move-groups-section.tsx` (created)
+  - `web/src/components/events/share-event-button.tsx` (created)
+  - `web/src/components/events/report-event-dialog.tsx` (created)
 - **Design & Security Decisions**:
   1. **Three-Way Lookup Branching in `EventDetailView`**: Implemented dedicated UI trees for `!isHydrated` (`<DetailPageSkeleton />`), `NOT_FOUND` (`<EmptyState>`), `RESTRICTED` (amber shield card rendering only `lookup.reason` + Guest/Member persona guidance), and `OK` (full two-column layout + Move Groups section).
   2. **Dynamic Address Unlock Toast Feedback**: In `RsvpControls`, compared `!event.unlockedPrivateAddress && updated.unlockedPrivateAddress` immediately after `adapter.setEventResponse(event.id, "GOING", viewer, nowIso)` so users RSVPing `GOING` to an `RSVP_GOING_ONLY` house party (like `evt-home-park-vinyl`) receive an explicit toast notifying them that the exact street address just unlocked in the Location card.
@@ -235,7 +235,7 @@ export function getServerSafePublicEventMetadata(
 - **Representative Implementation Snippet (Interactive RSVP & Live Address Unlock)**:
 
 ```tsx
-// apps/web/src/components/events/rsvp-controls.tsx
+// web/src/components/events/rsvp-controls.tsx
 const handleToggleResponse = (target: EventResponseType) => {
   if (!requireDemoMember("RSVP or save this event")) {
     return;
@@ -292,15 +292,15 @@ const handleToggleResponse = (target: EventResponseType) => {
 
 - **Objective**: Eliminate `react-hooks/exhaustive-deps` warnings on `useMemo` in `EventDetailView` and `EventMoveGroupsSection`, and verify strict React 19 / Next.js 16 render determinism across all 8 owned files.
 - **Files Touched**:
-  - `apps/web/src/components/events/event-detail-view.tsx` (updated)
-  - `apps/web/src/components/events/event-move-groups-section.tsx` (updated)
+  - `web/src/components/events/event-detail-view.tsx` (updated)
+  - `web/src/components/events/event-move-groups-section.tsx` (updated)
 - **Design & Security Decisions**:
   1. **Direct Synchronous Adapter Projection over Artificial `useMemo` Cache-Busting**: In `1.03.2`, `adapter.getEvent(eventId, viewer)` and `adapter.listMoveGroups(viewer, event.id)` were wrapped in `useMemo(..., [adapter, ..., revision])`. Because `adapter` is a mutable singleton whose internal state mutates when `SeshProvider` bumps `revision`, ESLint's `react-hooks/exhaustive-deps` rule flags `revision` as an unused dependency inside the `useMemo` callback—yet removing `revision` from `useMemo` would serve stale memoized views after an RSVP! Computing `const lookup = adapter.getEvent(eventId, viewer)` and `const moveGroups = adapter.listMoveGroups(viewer, event.id)` directly during render (over an in-memory array of ~14 events and ~6 groups) executes in sub-millisecond time, always reflects the latest `SeshProvider` render triggered by `revision`, and produces zero ESLint warnings.
   2. **Zero Impure Render Calls**: Audited every component and helper in `src/app/events/[id]/*` and `src/components/events/*` to ensure `new Date()`, `Date.now()`, `Math.random()`, and `crypto.randomUUID()` are never invoked during render; time-window classification (`Happening Now`, `Tonight`, `This Weekend`, `Upcoming`, `Past Move`) uses `classifyEventTimeWindow(event.startAt, event.endAt, nowIso)` driven by `SeshProvider`'s deterministic `nowIso`.
 - **Code Diff Applied**:
 
 ```tsx
-// apps/web/src/components/events/event-detail-view.tsx
+// web/src/components/events/event-detail-view.tsx
 export function EventDetailView({ eventId }: EventDetailViewProps) {
   const { adapter, viewer, nowIso, isHydrated, requireDemoMember } =
     useSesh();
@@ -311,7 +311,7 @@ export function EventDetailView({ eventId }: EventDetailViewProps) {
 ```
 
 ```tsx
-// apps/web/src/components/events/event-move-groups-section.tsx
+// web/src/components/events/event-move-groups-section.tsx
 export function EventMoveGroupsSection({
   event,
   className,
@@ -332,8 +332,8 @@ export function EventMoveGroupsSection({
 
 - **Objective**: Polish the `EventMoveGroupsSection` accessible heading copy (`Move Groups` + visible count badge) and harden `src/app/events/[id]/page.tsx` so `generateMetadata` decouples dynamic `await params` resolution from the `"use cache"` boundary under `cacheComponents: true`.
 - **Files Touched**:
-  - `apps/web/src/app/events/[id]/page.tsx` (updated)
-  - `apps/web/src/components/events/event-move-groups-section.tsx` (updated)
+  - `web/src/app/(app)/events/[id]/page.tsx` (updated)
+  - `web/src/components/events/event-move-groups-section.tsx` (updated)
 - **Design & Security Decisions**:
   1. **Decoupling `await params` from `"use cache"` in `page.tsx`**: As documented in Next.js 16's `use-cache` specification, awaiting `params: Promise<{ id: string }>` directly inside a `"use cache"` function causes prerender cache-filling timeouts because `params` is a request-specific runtime Promise created outside the cache scope. Extracting `async function buildCachedPublicMetadata(id: string): Promise<Metadata>` with `"use cache"` and awaiting `const { id } = await params;` inside `generateMetadata` outside `"use cache"` ensures:
      - `params` resolves cleanly at request/metadata-streaming time without hanging `next build`.
@@ -343,7 +343,7 @@ export function EventMoveGroupsSection({
 - **Final Production Code (`page.tsx` & `event-move-groups-section.tsx` Header)**:
 
 ```tsx
-// apps/web/src/app/events/[id]/page.tsx
+// web/src/app/(app)/events/[id]/page.tsx
 async function buildCachedPublicMetadata(id: string): Promise<Metadata> {
   "use cache";
   const publicMeta = getServerSafePublicEventMetadata(id);
@@ -379,7 +379,7 @@ export async function generateMetadata({
 ```
 
 ```tsx
-// apps/web/src/components/events/event-move-groups-section.tsx
+// web/src/components/events/event-move-groups-section.tsx
 <section className={cn("space-y-4", className)} aria-labelledby="move-groups-heading">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div className="space-y-1">
@@ -412,7 +412,7 @@ export async function generateMetadata({
 
 ## 4. TSDoc / Javadoc API & Component Reference
 
-### 4.1 `apps/web/src/app/events/[id]/page.tsx`
+### 4.1 `web/src/app/(app)/events/[id]/page.tsx`
 
 ```ts
 /**
@@ -490,7 +490,7 @@ export default function EventDetailPage({
 
 ---
 
-### 4.2 `apps/web/src/app/events/[id]/not-found.tsx`
+### 4.2 `web/src/app/(app)/events/[id]/not-found.tsx`
 
 ```ts
 /**
@@ -512,7 +512,7 @@ export default function EventNotFound(): React.JSX.Element;
 
 ---
 
-### 4.3 `apps/web/src/components/events/event-detail-view.tsx`
+### 4.3 `web/src/components/events/event-detail-view.tsx`
 
 ```ts
 /**
@@ -593,7 +593,7 @@ export function EventDetailView({ eventId }: EventDetailViewProps): React.JSX.El
 
 ---
 
-### 4.4 `apps/web/src/components/events/rsvp-controls.tsx`
+### 4.4 `web/src/components/events/rsvp-controls.tsx`
 
 ```ts
 /**
@@ -634,7 +634,7 @@ export function RsvpControls({ event, className }: RsvpControlsProps): React.JSX
 
 ---
 
-### 4.5 `apps/web/src/components/events/friends-going-card.tsx`
+### 4.5 `web/src/components/events/friends-going-card.tsx`
 
 ```ts
 /**
@@ -672,7 +672,7 @@ export function FriendsGoingCard({ event, className }: FriendsGoingCardProps): R
 
 ---
 
-### 4.6 `apps/web/src/components/events/event-move-groups-section.tsx`
+### 4.6 `web/src/components/events/event-move-groups-section.tsx`
 
 ```ts
 /**
@@ -748,7 +748,7 @@ export function EventMoveGroupsSection({
 
 ---
 
-### 4.7 `apps/web/src/components/events/share-event-button.tsx`
+### 4.7 `web/src/components/events/share-event-button.tsx`
 
 ```ts
 /**
@@ -798,7 +798,7 @@ export function ShareEventButton({
 
 ---
 
-### 4.8 `apps/web/src/components/events/report-event-dialog.tsx`
+### 4.8 `web/src/components/events/report-event-dialog.tsx`
 
 ```ts
 /**

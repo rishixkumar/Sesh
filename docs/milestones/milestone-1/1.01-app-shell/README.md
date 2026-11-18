@@ -13,9 +13,9 @@
  * @owner        Feature Agent 01
  * @status       Verified & Merged (ESLint 0 warnings · TypeScript 0 errors · Hydration-clean under PPR)
  * @runtime      Next.js 16.4.6 App Router (`cacheComponents: true`, `partialPrefetching: true`) · React 19.3.0
- * @see          apps/web/src/lib/context/sesh-provider.tsx
- * @see          apps/web/src/lib/data/adapter.ts
- * @see          apps/web/src/types/domain.ts
+ * @see          web/src/lib/context/sesh-provider.tsx
+ * @see          web/src/lib/data/adapter.ts
+ * @see          web/src/types/domain.ts
  */
 ```
 
@@ -91,17 +91,17 @@ RootLayout (RSC · src/app/layout.tsx)
 
 | # | Workspace-Relative File Path | Lines | Boundary | `useSesh()` Dependencies | Suspense / Hydration Strategy |
 | :- | :--- | ----: | :--- | :--- | :--- |
-| 1 | `apps/web/src/app/layout.tsx` | 57 | **Server Component (RSC)** | Mounts `<SeshProvider>` | `suppressHydrationWarning` on `<html>` for `next-themes` class injection |
-| 2 | `apps/web/src/components/layout/app-shell.tsx` | 30 | **Server-Compatible Component** | None directly (passes `{children}` through) | Preserves RSC streaming of `{children}` while mounting client nav leaves |
-| 3 | `apps/web/src/components/layout/site-header.tsx` | 263 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `revision`, `isHydrated` | Non-suspending `HeaderQuickSearch`; `<Suspense>` around `HeaderUtilityLinksInner` + `isHydrated` guard |
-| 4 | `apps/web/src/components/layout/desktop-nav.tsx` | 115 | **Client Component** (`"use client"`) | `isHydrated` | `<Suspense fallback={<DesktopNavFallback />}>` + `isHydrated && item.match(pathname)` |
-| 5 | `apps/web/src/components/layout/mobile-nav.tsx` | 168 | **Client Component** (`"use client"`) | `isHydrated` | `<Suspense fallback={<MobileNavFallback />}>` + `isHydrated && tab.match(pathname)` |
-| 6 | `apps/web/src/components/layout/demo-identity-switcher.tsx` | 246 | **Client Component** (`"use client"`) | `viewer`, `availableDemoUsers`, `setDemoIdentity` | Single mounted Radix `DropdownMenu`; deterministic initial `Maya Patel` state pre-hydration |
-| 7 | `apps/web/src/components/layout/demo-sign-in-dialog.tsx` | 145 | **Client Component** (`"use client"`) | `signInPrompt`, `closeSignInPrompt`, `availableDemoUsers`, `setDemoIdentity` | Closed (`open: false`) during SSR/hydration; opens only on client `requireDemoMember()` |
-| 8 | `apps/web/src/app/map/page.tsx` | 206 | **Server Component (RSC)** | None (consumes `CAMPUS_AREA_LABEL` constant) | Pure static RSC with exported `metadata`; zero map SDK payload |
-| 9 | `apps/web/src/app/friends/page.tsx` | 405 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `availableDemoUsers`, `setDemoIdentity`, `nowIso`, `revision` | Deterministic `STATIC_FALLBACK_ANCHOR_ISO` pre-hydration; live `nowIso` post-mount |
-| 10 | `apps/web/src/app/notifications/page.tsx` | 322 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `availableDemoUsers`, `setDemoIdentity`, `nowIso`, `revision` | Reactive `useMemo` keyed on `[adapter, viewer, nowIso, revision]` |
-| 11 | `apps/web/src/app/profile/page.tsx` | 691 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `availableDemoUsers`, `setDemoIdentity`, `nowIso`, `revision`, `resetAllDemoData` | Controlled `ConfirmDialog` for destructive `localStorage` reset |
+| 1 | `web/src/app/layout.tsx` | 57 | **Server Component (RSC)** | Mounts `<SeshProvider>` | `suppressHydrationWarning` on `<html>` for `next-themes` class injection |
+| 2 | `web/src/components/layout/app-shell.tsx` | 30 | **Server-Compatible Component** | None directly (passes `{children}` through) | Preserves RSC streaming of `{children}` while mounting client nav leaves |
+| 3 | `web/src/components/layout/site-header.tsx` | 263 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `revision`, `isHydrated` | Non-suspending `HeaderQuickSearch`; `<Suspense>` around `HeaderUtilityLinksInner` + `isHydrated` guard |
+| 4 | `web/src/components/layout/desktop-nav.tsx` | 115 | **Client Component** (`"use client"`) | `isHydrated` | `<Suspense fallback={<DesktopNavFallback />}>` + `isHydrated && item.match(pathname)` |
+| 5 | `web/src/components/layout/mobile-nav.tsx` | 168 | **Client Component** (`"use client"`) | `isHydrated` | `<Suspense fallback={<MobileNavFallback />}>` + `isHydrated && tab.match(pathname)` |
+| 6 | `web/src/components/layout/demo-identity-switcher.tsx` | 246 | **Client Component** (`"use client"`) | `viewer`, `availableDemoUsers`, `setDemoIdentity` | Single mounted Radix `DropdownMenu`; deterministic initial `Maya Patel` state pre-hydration |
+| 7 | `web/src/components/layout/demo-sign-in-dialog.tsx` | 145 | **Client Component** (`"use client"`) | `signInPrompt`, `closeSignInPrompt`, `availableDemoUsers`, `setDemoIdentity` | Closed (`open: false`) during SSR/hydration; opens only on client `requireDemoMember()` |
+| 8 | `web/src/app/(app)/map/page.tsx` | 206 | **Server Component (RSC)** | None (consumes `CAMPUS_AREA_LABEL` constant) | Pure static RSC with exported `metadata`; zero map SDK payload |
+| 9 | `web/src/app/(app)/friends/page.tsx` | 405 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `availableDemoUsers`, `setDemoIdentity`, `nowIso`, `revision` | Deterministic `STATIC_FALLBACK_ANCHOR_ISO` pre-hydration; live `nowIso` post-mount |
+| 10 | `web/src/app/(app)/notifications/page.tsx` | 322 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `availableDemoUsers`, `setDemoIdentity`, `nowIso`, `revision` | Reactive `useMemo` keyed on `[adapter, viewer, nowIso, revision]` |
+| 11 | `web/src/app/(app)/profile/page.tsx` | 691 | **Client Component** (`"use client"`) | `adapter`, `viewer`, `availableDemoUsers`, `setDemoIdentity`, `nowIso`, `revision`, `resetAllDemoData` | Controlled `ConfirmDialog` for destructive `localStorage` reset |
 
 ---
 
@@ -114,12 +114,12 @@ RootLayout (RSC · src/app/layout.tsx)
 Audit shared Milestone 1 contracts (`domain.ts`, `sesh-provider.tsx`, `adapter.ts`, `seed.ts`, `dates.ts`, and `components/shared/*`) and Next.js `16.4.6` configuration (`cacheComponents: true`, `partialPrefetching: true`) before writing any shell or route code so all 5 parallel agents share an unbroken layout and session contract.
 
 ### Files Audited (Read-Only)
-- `apps/web/next.config.ts`
-- `apps/web/src/types/domain.ts`
-- `apps/web/src/lib/context/sesh-provider.tsx`
-- `apps/web/src/lib/data/adapter.ts`
-- `apps/web/src/lib/mock/seed.ts`
-- `apps/web/src/components/shared/{page-header,empty-state,demo-notice-banner,user-avatar,confirm-dialog}.tsx`
+- `web/next.config.ts`
+- `web/src/types/domain.ts`
+- `web/src/lib/context/sesh-provider.tsx`
+- `web/src/lib/data/adapter.ts`
+- `web/src/lib/mock/seed.ts`
+- `web/src/components/shared/{page-header,empty-state,demo-notice-banner,user-avatar,confirm-dialog}.tsx`
 
 ### Key Architectural Decisions
 1. **Deterministic Pre-Hydration Identity**: Verified that `SeshProvider` initializes `viewer` synchronously to `{ mode: "MEMBER", user: DEMO_SWITCHABLE_USERS[0] }` (`Maya Patel`) and `nowIso` to `STATIC_FALLBACK_ANCHOR_ISO` (`"2026-11-11T21:00:00.000Z"`), flipping `isHydrated` to `true` inside a `useEffect` after attaching `window.localStorage`. This guarantees server HTML and first client render share identical viewer state.
@@ -128,7 +128,7 @@ Audit shared Milestone 1 contracts (`domain.ts`, `sesh-provider.tsx`, `adapter.t
 
 ### Key Contract Excerpt Verified (`SeshContextValue`)
 ```ts
-// Verified contract in apps/web/src/lib/context/sesh-provider.tsx
+// Verified contract in web/src/lib/context/sesh-provider.tsx
 export interface SeshContextValue {
   adapter: SeshDataAdapter;
   viewer: ViewerSession;
@@ -158,13 +158,13 @@ export interface SeshContextValue {
 Implement the root provider stack, accessible `AppShell`, sticky `SiteHeader`, `DesktopNav`, 5-tab `MobileNav`, `DemoIdentitySwitcher`, and `DemoSignInDialog`.
 
 ### Files Touched
-- Modified: `apps/web/src/app/layout.tsx`
-- Created: `apps/web/src/components/layout/app-shell.tsx`
-- Created: `apps/web/src/components/layout/site-header.tsx`
-- Created: `apps/web/src/components/layout/desktop-nav.tsx`
-- Created: `apps/web/src/components/layout/mobile-nav.tsx`
-- Created: `apps/web/src/components/layout/demo-identity-switcher.tsx`
-- Created: `apps/web/src/components/layout/demo-sign-in-dialog.tsx`
+- Modified: `web/src/app/layout.tsx`
+- Created: `web/src/components/layout/app-shell.tsx`
+- Created: `web/src/components/layout/site-header.tsx`
+- Created: `web/src/components/layout/desktop-nav.tsx`
+- Created: `web/src/components/layout/mobile-nav.tsx`
+- Created: `web/src/components/layout/demo-identity-switcher.tsx`
+- Created: `web/src/components/layout/demo-sign-in-dialog.tsx`
 
 ### Architectural Decisions
 1. **Persona Role Metadata (`DEMO_PERSONA_META`)**: Exported a canonical lookup dictionary from `demo-identity-switcher.tsx` mapping `user-maya` (*Primary Host*), `user-jordan` (*Friend Tester*), and `user-tyler` (*Non-Friend GT*) to concise role badges and testing hints. Reused this dictionary across `DemoIdentitySwitcher`, `DemoSignInDialog`, `FriendsNetworkPage`, and `ProfilePage` so persona guidance never drifts.
@@ -173,7 +173,7 @@ Implement the root provider stack, accessible `AppShell`, sticky `SiteHeader`, `
 
 ### Key Code Excerpt (`DEMO_PERSONA_META` & `AppShell`)
 ```tsx
-// apps/web/src/components/layout/demo-identity-switcher.tsx
+// web/src/components/layout/demo-identity-switcher.tsx
 export const DEMO_PERSONA_META: Record<string, DemoPersonaMeta> = {
   "user-maya": {
     roleBadge: "Primary Host",
@@ -194,7 +194,7 @@ export const DEMO_PERSONA_META: Record<string, DemoPersonaMeta> = {
 ```
 
 ```tsx
-// apps/web/src/components/layout/app-shell.tsx
+// web/src/components/layout/app-shell.tsx
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-full flex-1 flex-col bg-background text-foreground">
@@ -233,10 +233,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 Build all four shell routes owned by Agent 01 — turning deferred backend surfaces into high-signal interactive prototype tools — and validate all 11 files against ESLint, TypeScript, and render-purity checks.
 
 ### Files Touched
-- Created: `apps/web/src/app/map/page.tsx`
-- Created: `apps/web/src/app/friends/page.tsx`
-- Created: `apps/web/src/app/notifications/page.tsx`
-- Created: `apps/web/src/app/profile/page.tsx`
+- Created: `web/src/app/(app)/map/page.tsx`
+- Created: `web/src/app/(app)/friends/page.tsx`
+- Created: `web/src/app/(app)/notifications/page.tsx`
+- Created: `web/src/app/(app)/profile/page.tsx`
 
 ### Architectural Decisions
 1. **`/map` as Zero-JS Server Component with Corridor Deep Links**: Rather than bundling Mapbox/Leaflet in Milestone 1, `CampusMapPlaceholderPage` is a pure Server Component explaining Sesh's privacy-first geospatial model (exact pins for public venues vs. neighborhood rings like *Home Park* for private residences) and providing 6 corridor filter cards (`Tech Green`, `Tech Square`, `Home Park`, `West Midtown`, `BeltLine`, `Campus`) that deep-link to `/?q=<encoded>`.
@@ -249,7 +249,7 @@ Build all four shell routes owned by Agent 01 — turning deferred backend surfa
 
 ### Key Code Excerpt (`ProfilePage` Draft-Inclusive Query & Reset Handler)
 ```tsx
-// apps/web/src/app/profile/page.tsx
+// web/src/app/(app)/profile/page.tsx
 const { hostedMoves, rsvpAndSavedMoves, myMoveGroups } = useMemo(() => {
   void revision;
   if (viewer.mode !== "MEMBER") {
@@ -278,7 +278,7 @@ const { hostedMoves, rsvpAndSavedMoves, myMoveGroups } = useMemo(() => {
 
 ### Verification Notes
 - Executed `npx eslint` on all 11 owned files -> **Exit code 0** (zero warnings/errors).
-- Executed `npx tsc --noEmit` across `apps/web` -> **Exit code 0**.
+- Executed `npx tsc --noEmit` across `web` -> **Exit code 0**.
 - Executed regex audit across `src/components/layout/*` and route files confirming zero render-time calls to `new Date()`, `Date.now()`, `Math.random()`, `crypto.randomUUID()`, `window.*`, or `localStorage.*`.
 
 </details>
@@ -292,9 +292,9 @@ const { hostedMoves, rsvpAndSavedMoves, myMoveGroups } = useMemo(() => {
 Eliminate subtle React 19 / Next.js 16 Partial Prerendering (PPR) hydration mismatches discovered during full-app integration testing across dynamic routes (`/events/[id]`, `/move-groups/[id]`) and hard refreshes on non-root routes (`/friends`, `/profile`, `/notifications`).
 
 ### Files Touched
-- Refined: `apps/web/src/components/layout/site-header.tsx`
-- Refined: `apps/web/src/components/layout/desktop-nav.tsx`
-- Refined: `apps/web/src/components/layout/mobile-nav.tsx`
+- Refined: `web/src/components/layout/site-header.tsx`
+- Refined: `web/src/components/layout/desktop-nav.tsx`
+- Refined: `web/src/components/layout/mobile-nav.tsx`
 
 ### Root-Cause Analysis (Critical Debugging Reference)
 During post-merge integration across all 5 Milestone 1 agents, two subtle Next.js 16 `cacheComponents: true` + Radix UI interactions surfaced:
@@ -326,7 +326,7 @@ During post-merge integration across all 5 Milestone 1 agents, two subtle Next.j
 
 ### Key Code Excerpt (`1.01.4` Hydration-Safe Pattern)
 ```tsx
-// apps/web/src/components/layout/desktop-nav.tsx (lines 46-83)
+// web/src/components/layout/desktop-nav.tsx (lines 46-83)
 function DesktopNavInner() {
   const pathname = usePathname();
   const { isHydrated } = useSesh();
@@ -384,7 +384,7 @@ function DesktopNavInner() {
 ```ts
 /**
  * @component    RootLayout
- * @file         apps/web/src/app/layout.tsx
+ * @file         web/src/app/layout.tsx
  * @kind         React Server Component (Next.js App Router Root Layout)
  * @description  Defines the top-level `<html>` and `<body>` document skeleton, registers
  *               Geist Sans and Geist Mono CSS custom properties, exports site-wide Georgia Tech
@@ -456,7 +456,7 @@ export default function RootLayout({
 ```ts
 /**
  * @component    AppShell
- * @file         apps/web/src/components/layout/app-shell.tsx
+ * @file         web/src/components/layout/app-shell.tsx
  * @kind         Server-Compatible Structural Layout Component (no `"use client"` directive)
  * @description  Composes Sesh's universal application frame: an accessible keyboard skip link,
  *               sticky `SiteHeader`, centered `<main id="main-content">` container, mobile
@@ -486,7 +486,7 @@ export default function RootLayout({
 ```ts
 /**
  * @component    SiteHeader
- * @file         apps/web/src/components/layout/site-header.tsx
+ * @file         web/src/components/layout/site-header.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Sticky top campus navigation bar (`h-16`, `z-40`, backdrop-blurred) housing:
  *               1. Brand link (`/`) with `ZapIcon`, `"Sesh"` wordmark, and `"Georgia Tech · 18+"` badge.
@@ -545,7 +545,7 @@ const pendingAlertCount = useMemo(() => {
 ```ts
 /**
  * @component    DesktopNav
- * @file         apps/web/src/components/layout/desktop-nav.tsx
+ * @file         web/src/components/layout/desktop-nav.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Horizontal primary navigation bar visible at `md` (`>= 768px`) and wider.
  *               Renders semantic links for `Events Hub` (`/`), `Map` (`/map`), and `Friends` (`/friends`),
@@ -610,7 +610,7 @@ export function DesktopNav() {
 ```ts
 /**
  * @component    MobileNav
- * @file         apps/web/src/components/layout/mobile-nav.tsx
+ * @file         web/src/components/layout/mobile-nav.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Fixed 5-tab bottom navigation bar (`md:hidden`, `z-40`, `h-16` + safe-area inset)
  *               providing thumb-friendly access to `Hub` (`/`), `Map` (`/map`), `Create` (`/events/new`),
@@ -683,7 +683,7 @@ const MOBILE_TABS: MobileTabItem[] = [
 ```ts
 /**
  * @component    DemoIdentitySwitcher
- * @file         apps/web/src/components/layout/demo-identity-switcher.tsx
+ * @file         web/src/components/layout/demo-identity-switcher.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Amber-tinted prototype persona dropdown clearly labeled `"Demo Identity"` /
  *               `"Prototype Only"`. Enables 1-click switching between `Guest (Unauthenticated)`
@@ -749,7 +749,7 @@ export function DemoIdentitySwitcher({
 ```ts
 /**
  * @component    DemoSignInDialog
- * @file         apps/web/src/components/layout/demo-sign-in-dialog.tsx
+ * @file         web/src/components/layout/demo-sign-in-dialog.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Global modal dialog listening to `signInPrompt` from `useSesh()`. Whenever an
  *               unauthenticated `Guest` viewer attempts a protected campus action (RSVP, Save,
@@ -798,7 +798,7 @@ export function DemoSignInDialog() {
 /**
  * @route        /map
  * @component    CampusMapPlaceholderPage
- * @file         apps/web/src/app/map/page.tsx
+ * @file         web/src/app/(app)/map/page.tsx
  * @kind         React Server Component (Static Route + Exported `metadata`)
  * @description  Milestone 1 Campus Map placeholder route. Explains why interactive PostGIS radius
  *               queries and map tiles are deferred to the geospatial milestone, documents Sesh's
@@ -831,7 +831,7 @@ export const metadata: Metadata = {
 /**
  * @route        /friends
  * @component    FriendsNetworkPage
- * @file         apps/web/src/app/friends/page.tsx
+ * @file         web/src/app/(app)/friends/page.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Interactive Georgia Tech friend-network inspector for the active Demo Identity:
  *               - In `GUEST` mode: Renders `EmptyState` explaining why Guests have no campus friend
@@ -876,7 +876,7 @@ const { friends, nonFriendCampusUsers } = useMemo(() => {
 /**
  * @route        /notifications
  * @component    NotificationsPlaceholderPage
- * @file         apps/web/src/app/notifications/page.tsx
+ * @file         web/src/app/(app)/notifications/page.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Prototype Activity Center deriving actionable campus coordination items from live
  *               local adapter state while explaining that real push/SMS/background streams are
@@ -918,7 +918,7 @@ const going = events
 /**
  * @route        /profile
  * @component    ProfilePage
- * @file         apps/web/src/app/profile/page.tsx
+ * @file         web/src/app/(app)/profile/page.tsx
  * @kind         Client Component (`"use client"`)
  * @description  Comprehensive Demo Identity dashboard, personal activity hub, and prototype data
  *               management console:
