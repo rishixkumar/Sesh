@@ -10,14 +10,14 @@
  * @milestone    Milestone 1 — Frontend Prototype & Viewer-Safe Adapter Architecture
  * @agent        Feature Agent 05 ("Move Groups") — Workstream 1.05
  * @iterations   1.05.1 · 1.05.2 · 1.05.3 · 1.05.4
- * @owner        apps/web/src/app/move-groups/** & apps/web/src/components/move-groups/**
+ * @owner        web/src/app/(app)/move-groups/** & web/src/components/move-groups/**
  * @status       COMPLETE — TypeScript (tsc --noEmit) & ESLint + React Compiler Clean (0 errors, 0 warnings)
  * @runtime      Next.js 16.4.6 (App Router, cacheComponents: true, partialPrefetching: true) · React 19.3.0
  * @timezone     America/New_York (Georgia Tech & Midtown Atlanta wall-clock projection)
- * @see          apps/web/src/types/domain.ts
- * @see          apps/web/src/lib/permissions/policies.ts
- * @see          apps/web/src/lib/data/adapter.ts
- * @see          apps/web/src/lib/validation/schemas.ts
+ * @see          web/src/types/domain.ts
+ * @see          web/src/lib/permissions/policies.ts
+ * @see          web/src/lib/data/adapter.ts
+ * @see          web/src/lib/validation/schemas.ts
  */
 ```
 
@@ -55,7 +55,7 @@ In Sesh, **Move Groups** are event-attached student crews (2–50 students) that
 
 Workstream `1.05` owns **10 files** across Next.js App Router pages and client coordination components, consuming shared domain contracts (`domain.ts`), Zod 4 form schemas (`schemas.ts`), viewer-safe projection policies (`policies.ts`), and the local overlay store (`LocalMockSeshAdapter` in `adapter.ts`) without mutating any shared library files.
 
-| # | File Path (`apps/web/...`) | Layer | Primary Export(s) | Responsibility |
+| # | File Path (`web/...`) | Layer | Primary Export(s) | Responsibility |
 | :- | :--- | :--- | :--- | :--- |
 | 1 | `src/app/move-groups/new/page.tsx` | Server Route | `NewMoveGroupPage`, `metadata` | `/move-groups/new?event=ID` route shell with `<Suspense>` boundary around `useSearchParams()` |
 | 2 | `src/app/move-groups/[id]/page.tsx` | Server Route | `MoveGroupDetailPage`, `metadata` | `/move-groups/[id]` route shell isolating `await params` inside an async `<Suspense>` child |
@@ -199,16 +199,16 @@ For **every** `MoveGroupRosterProjection` instance across all viewer modes (`GUE
 Audit all upstream domain, validation, date, permission, and adapter modules, then scaffold all 10 Move Group routes and client components with full support for crew creation, privacy-masked detail views, non-cryptographic invite previews, and owner-only management controls.
 
 #### Files Touched
-- Created `apps/web/src/components/move-groups/move-group-card.tsx`
-- Created `apps/web/src/components/move-groups/move-group-roster.tsx`
-- Created `apps/web/src/components/move-groups/move-group-invite-dialog.tsx`
-- Created `apps/web/src/components/move-groups/create-move-group-form.tsx`
-- Created `apps/web/src/components/move-groups/move-group-detail-view.tsx`
-- Created `apps/web/src/components/move-groups/move-group-manage-view.tsx`
-- Created `apps/web/src/app/move-groups/new/page.tsx`
-- Created `apps/web/src/app/move-groups/[id]/page.tsx`
-- Created `apps/web/src/app/move-groups/[id]/not-found.tsx`
-- Created `apps/web/src/app/move-groups/[id]/manage/page.tsx`
+- Created `web/src/components/move-groups/move-group-card.tsx`
+- Created `web/src/components/move-groups/move-group-roster.tsx`
+- Created `web/src/components/move-groups/move-group-invite-dialog.tsx`
+- Created `web/src/components/move-groups/create-move-group-form.tsx`
+- Created `web/src/components/move-groups/move-group-detail-view.tsx`
+- Created `web/src/components/move-groups/move-group-manage-view.tsx`
+- Created `web/src/app/(app)/move-groups/new/page.tsx`
+- Created `web/src/app/(app)/move-groups/[id]/page.tsx`
+- Created `web/src/app/(app)/move-groups/[id]/not-found.tsx`
+- Created `web/src/app/(app)/move-groups/[id]/manage/page.tsx`
 
 #### Design & Privacy Rationale
 - **Centralized Enum Presentation Metadata**: Exported `DISCOVERABILITY_META`, `JOIN_MODE_META`, and `VIEWER_RELATION_META` from `move-group-card.tsx` so cards, detail headers, invite dialogs, creation forms, and management forms never drift in badge copy or policy descriptions.
@@ -258,10 +258,10 @@ function computeDefaultMeetupLocal(eventStartIso: string): string {
 Run `npx tsc --noEmit` and `npx eslint src/app/move-groups src/components/move-groups` under Next.js 16.4.6 + React 19's strict ESLint rules (`react-hooks/incompatible-library`, `react-hooks/set-state-in-effect`, `react-hooks/exhaustive-deps`) and eliminate every error and warning.
 
 #### Files Touched
-- Modified `apps/web/src/components/move-groups/move-group-invite-dialog.tsx`
-- Modified `apps/web/src/components/move-groups/create-move-group-form.tsx`
-- Modified `apps/web/src/components/move-groups/move-group-detail-view.tsx`
-- Modified `apps/web/src/components/move-groups/move-group-manage-view.tsx`
+- Modified `web/src/components/move-groups/move-group-invite-dialog.tsx`
+- Modified `web/src/components/move-groups/create-move-group-form.tsx`
+- Modified `web/src/components/move-groups/move-group-detail-view.tsx`
+- Modified `web/src/components/move-groups/move-group-manage-view.tsx`
 
 #### Design & Compiler Rationale
 1. **Eliminating `react-hooks/set-state-in-effect` in `MoveGroupInviteDialog`**:
@@ -296,10 +296,10 @@ Re-ran `npx tsc --noEmit && npx eslint src/app/move-groups src/components/move-g
 Verify strict compliance with Next.js 16.4.6 (`cacheComponents: true`, `partialPrefetching: true`) dynamic rendering rules, deterministic clock usage, and `localStorage` refresh persistence for locally created Move Groups (`mg-local-*`).
 
 #### Files Audited
-- `apps/web/src/app/move-groups/new/page.tsx`
-- `apps/web/src/app/move-groups/[id]/page.tsx`
-- `apps/web/src/app/move-groups/[id]/manage/page.tsx`
-- All 6 client components in `apps/web/src/components/move-groups/*.tsx`
+- `web/src/app/(app)/move-groups/new/page.tsx`
+- `web/src/app/(app)/move-groups/[id]/page.tsx`
+- `web/src/app/(app)/move-groups/[id]/manage/page.tsx`
+- All 6 client components in `web/src/components/move-groups/*.tsx`
 
 #### Architectural & Runtime Guarantees Verified
 1. **Unawaited `params: Promise<{ id: string }>` in Dynamic Route Pages**:
@@ -344,7 +344,7 @@ Verify strict compliance with Next.js 16.4.6 (`cacheComponents: true`, `partialP
 Align cross-feature navigation between Feature 05 (Move Groups) and Feature 03 (Event Creation & Editing) so the empty-published-events fallback CTA points to the canonical `/events/new` route.
 
 #### Files Touched
-- Modified `apps/web/src/components/move-groups/create-move-group-form.tsx`
+- Modified `web/src/components/move-groups/create-move-group-form.tsx`
 
 #### Code Implementation (`create-move-group-form.tsx` Empty-Published-Events State)
 ```tsx
@@ -400,7 +400,7 @@ if (publishedEvents.length === 0) {
 ```ts
 /**
  * @component      NewMoveGroupPage
- * @filepath       apps/web/src/app/move-groups/new/page.tsx
+ * @filepath       web/src/app/(app)/move-groups/new/page.tsx
  * @kind           Next.js Server Component (Static Shell + Suspense Boundary)
  * @route          GET /move-groups/new?event={optionalEventId}
  *
@@ -423,7 +423,7 @@ export default function NewMoveGroupPage(): JSX.Element;
 ```ts
 /**
  * @component      MoveGroupDetailPage
- * @filepath       apps/web/src/app/move-groups/[id]/page.tsx
+ * @filepath       web/src/app/(app)/move-groups/[id]/page.tsx
  * @kind           Next.js Server Component + Async Suspense Child (`MoveGroupDetailRouteContent`)
  * @route          GET /move-groups/[id]
  *
@@ -450,7 +450,7 @@ export default function MoveGroupDetailPage(props: {
 ```ts
 /**
  * @component      MoveGroupNotFound
- * @filepath       apps/web/src/app/move-groups/[id]/not-found.tsx
+ * @filepath       web/src/app/(app)/move-groups/[id]/not-found.tsx
  * @kind           Next.js Not-Found Boundary Component
  * @route          /move-groups/[id] (404 segment fallback)
  *
@@ -471,7 +471,7 @@ export default function MoveGroupNotFound(): JSX.Element;
 ```ts
 /**
  * @component      MoveGroupManagePage
- * @filepath       apps/web/src/app/move-groups/[id]/manage/page.tsx
+ * @filepath       web/src/app/(app)/move-groups/[id]/manage/page.tsx
  * @kind           Next.js Server Component + Async Suspense Child (`MoveGroupManageRouteContent`)
  * @route          GET /move-groups/[id]/manage
  *
@@ -500,7 +500,7 @@ export default function MoveGroupManagePage(props: {
 ```ts
 /**
  * @component      MoveGroupCard
- * @filepath       apps/web/src/components/move-groups/move-group-card.tsx
+ * @filepath       web/src/components/move-groups/move-group-card.tsx
  * @kind           Client Component ("use client")
  *
  * @description
@@ -542,7 +542,7 @@ export function MoveGroupCard(props: MoveGroupCardProps): JSX.Element;
 ```ts
 /**
  * @component      CreateMoveGroupForm
- * @filepath       apps/web/src/components/move-groups/create-move-group-form.tsx
+ * @filepath       web/src/components/move-groups/create-move-group-form.tsx
  * @kind           Client Component ("use client")
  *
  * @description
@@ -584,7 +584,7 @@ export function CreateMoveGroupForm(): JSX.Element;
 ```ts
 /**
  * @component      MoveGroupDetailView
- * @filepath       apps/web/src/components/move-groups/move-group-detail-view.tsx
+ * @filepath       web/src/components/move-groups/move-group-detail-view.tsx
  * @kind           Client Component ("use client")
  *
  * @description
@@ -629,7 +629,7 @@ export function MoveGroupDetailView(props: MoveGroupDetailViewProps): JSX.Elemen
 ```ts
 /**
  * @component      MoveGroupRoster
- * @filepath       apps/web/src/components/move-groups/move-group-roster.tsx
+ * @filepath       web/src/components/move-groups/move-group-roster.tsx
  * @kind           Client Component ("use client")
  *
  * @description
@@ -665,7 +665,7 @@ export function MoveGroupRoster(props: MoveGroupRosterProps): JSX.Element;
 ```ts
 /**
  * @component      MoveGroupInviteDialog
- * @filepath       apps/web/src/components/move-groups/move-group-invite-dialog.tsx
+ * @filepath       web/src/components/move-groups/move-group-invite-dialog.tsx
  * @kind           Client Component ("use client")
  *
  * @description
@@ -696,7 +696,7 @@ export function MoveGroupInviteDialog(props: MoveGroupInviteDialogProps): JSX.El
 ```ts
 /**
  * @component      MoveGroupManageView
- * @filepath       apps/web/src/components/move-groups/move-group-manage-view.tsx
+ * @filepath       web/src/components/move-groups/move-group-manage-view.tsx
  * @kind           Client Component ("use client")
  *
  * @description
@@ -732,7 +732,7 @@ export function MoveGroupManageView(props: MoveGroupManageViewProps): JSX.Elemen
 
 ### 4.3 Shared Policy & Adapter Projection Contracts Consumed
 
-For cross-milestone debugging, the Move Groups UI relies on three pure functions in `apps/web/src/lib/permissions/policies.ts` and six mutation methods on `SeshDataAdapter` (`apps/web/src/lib/data/adapter.ts`):
+For cross-milestone debugging, the Move Groups UI relies on three pure functions in `web/src/lib/permissions/policies.ts` and six mutation methods on `SeshDataAdapter` (`web/src/lib/data/adapter.ts`):
 
 | Contract / Method | Source File | Input Signature | Output / Guarantee |
 | :--- | :--- | :--- | :--- |

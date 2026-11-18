@@ -14,12 +14,12 @@
  * @status       VERIFIED (TypeScript 5 strict `tsc --noEmit` + ESLint 9 + Vitest)
  * @runtime      Next.js 16.4.6 App Router (`cacheComponents: true`, Partial Prerendering)
  * @timezone     Stored as UTC ISO-8601 (`YYYY-MM-DDTHH:mm:ss.sssZ`); authored & displayed in `America/New_York` (ET)
- * @see          apps/web/src/app/events/new/page.tsx
- * @see          apps/web/src/app/events/[id]/edit/page.tsx
- * @see          apps/web/src/components/moves/edit-move-view.tsx
- * @see          apps/web/src/components/moves/move-form.tsx
- * @see          apps/web/src/components/moves/move-preview.tsx
- * @see          apps/web/src/lib/validation/schemas.ts
+ * @see          web/src/app/(app)/events/new/page.tsx
+ * @see          web/src/app/(app)/events/[id]/edit/page.tsx
+ * @see          web/src/components/moves/edit-move-view.tsx
+ * @see          web/src/components/moves/move-form.tsx
+ * @see          web/src/components/moves/move-preview.tsx
+ * @see          web/src/lib/validation/schemas.ts
  */
 ```
 
@@ -52,12 +52,12 @@ Agent `1.04` owns the authoring and editing lifecycle for **Moves** across five 
 
 | File Path | Layer | Rendering Boundary | Responsibility |
 | --- | --- | --- | --- |
-| `apps/web/src/app/events/new/page.tsx` | App Router Page | `"use client"` | Entry route `/events/new`; renders `PageHeader`, pre-hydration `DetailPageSkeleton`, Guest sign-in gate (`requireDemoMember`), or `<MoveForm mode="create" />` keyed by active member ID. |
-| `apps/web/src/app/events/[id]/edit/page.tsx` | App Router Page | Server Component + `<Suspense>` | Entry route `/events/[id]/edit`; isolates `await params` inside async `<EditMoveLoader>` under `<Suspense fallback={<DetailPageSkeleton />}>` for Next.js 16 `cacheComponents: true`. |
-| `apps/web/src/components/moves/edit-move-view.tsx` | Feature View | `"use client"` | Resolves `adapter.getEvent(eventId, viewer)` post-hydration and enforces four-state gatekeeping: Skeleton -> `NOT_FOUND` -> `RESTRICTED` -> Non-Host Unauthorized -> Authorized `<MoveForm mode="edit" />`. |
-| `apps/web/src/components/moves/move-form.tsx` | Feature Form | `"use client"` | Dual-mode (`create` / `edit`) React Hook Form + Zod v4 (`zodResolver(moveFormSchema)`) form with `Controller`-bound Radix `<Select>` controls, ET wall-clock conversion, sticky/dialog `MovePreview`, and `DRAFT` vs. `PUBLISHED` submission handlers. |
-| `apps/web/src/components/moves/move-preview.tsx` | Feature Preview | `"use client"` | Real-time simulated Move card with interactive `GENERAL` vs. `UNLOCKED` perspective tabs demonstrating exact-address masking (`privateAddress` vs. `publicDisplayLocation`) and audience visibility rules. |
-| `apps/web/src/lib/validation/schemas.ts` *(shared)* | Validation Contract | Isomorphic TS | Defines `moveFormSchema` (Zod v4 `z.object(...).superRefine(...)`) and inferred `MoveFormValues` consumed by `MoveForm` and `MovePreview`. |
+| `web/src/app/(app)/events/new/page.tsx` | App Router Page | `"use client"` | Entry route `/events/new`; renders `PageHeader`, pre-hydration `DetailPageSkeleton`, Guest sign-in gate (`requireDemoMember`), or `<MoveForm mode="create" />` keyed by active member ID. |
+| `web/src/app/(app)/events/[id]/edit/page.tsx` | App Router Page | Server Component + `<Suspense>` | Entry route `/events/[id]/edit`; isolates `await params` inside async `<EditMoveLoader>` under `<Suspense fallback={<DetailPageSkeleton />}>` for Next.js 16 `cacheComponents: true`. |
+| `web/src/components/moves/edit-move-view.tsx` | Feature View | `"use client"` | Resolves `adapter.getEvent(eventId, viewer)` post-hydration and enforces four-state gatekeeping: Skeleton -> `NOT_FOUND` -> `RESTRICTED` -> Non-Host Unauthorized -> Authorized `<MoveForm mode="edit" />`. |
+| `web/src/components/moves/move-form.tsx` | Feature Form | `"use client"` | Dual-mode (`create` / `edit`) React Hook Form + Zod v4 (`zodResolver(moveFormSchema)`) form with `Controller`-bound Radix `<Select>` controls, ET wall-clock conversion, sticky/dialog `MovePreview`, and `DRAFT` vs. `PUBLISHED` submission handlers. |
+| `web/src/components/moves/move-preview.tsx` | Feature Preview | `"use client"` | Real-time simulated Move card with interactive `GENERAL` vs. `UNLOCKED` perspective tabs demonstrating exact-address masking (`privateAddress` vs. `publicDisplayLocation`) and audience visibility rules. |
+| `web/src/lib/validation/schemas.ts` *(shared)* | Validation Contract | Isomorphic TS | Defines `moveFormSchema` (Zod v4 `z.object(...).superRefine(...)`) and inferred `MoveFormValues` consumed by `MoveForm` and `MovePreview`. |
 
 ---
 
@@ -136,9 +136,9 @@ A foundational UX and data-modeling invariant in Sesh is keeping **Moves** and *
 Establish Next.js 16.4.6 (`cacheComponents: true`) compliant routes for `/events/new` and `/events/[id]/edit` with deterministic SSR/PPR shells, safe hydration of `localStorage`-backed Moves (`evt-local-*`), one-click Guest persona elevation, and strict host-only edit authorization that never mounts `<MoveForm>` or leaks private fields to unauthorized viewers.
 
 #### Files Touched
-- `apps/web/src/app/events/new/page.tsx`
-- `apps/web/src/app/events/[id]/edit/page.tsx`
-- `apps/web/src/components/moves/edit-move-view.tsx`
+- `web/src/app/(app)/events/new/page.tsx`
+- `web/src/app/(app)/events/[id]/edit/page.tsx`
+- `web/src/components/moves/edit-move-view.tsx`
 
 #### Architectural & Security Rationale
 1. **Next.js 16 Dynamic `params` Promise Isolation:** Under `cacheComponents: true`, awaiting `params: Promise<{ id: string }>` at the top level of a Server Component blocks Partial Prerendering and triggers dynamic-IO build errors unless wrapped inside `<Suspense>`. `EditMovePage` stays synchronous and delegates `const { id } = await params;` to an inner async `<EditMoveLoader>` inside `<Suspense fallback={<DetailPageSkeleton />}>`.
@@ -152,7 +152,7 @@ Establish Next.js 16.4.6 (`cacheComponents: true`) compliant routes for `/events
 #### Implementation Excerpts
 
 ```tsx
-// apps/web/src/app/events/[id]/edit/page.tsx
+// web/src/app/(app)/events/[id]/edit/page.tsx
 async function EditMoveLoader({
   params,
 }: {
@@ -182,7 +182,7 @@ export default function EditMovePage({
 ```
 
 ```tsx
-// apps/web/src/components/moves/edit-move-view.tsx (Hydration & Host Authorization Guards)
+// web/src/components/moves/edit-move-view.tsx (Hydration & Host Authorization Guards)
 const lookup = useMemo(() => {
   if (!isHydrated) return null;
   // Touch revision so edits/resets re-run projection cleanly
@@ -217,8 +217,8 @@ const isAuthorizedHost =
 Build the reusable `MoveForm` (`mode: "create" | "edit"`) backed by `useForm<MoveFormValues>({ resolver: zodResolver(moveFormSchema), mode: "onBlur" })`, wiring controlled Radix/shadcn `<Select>` fields, deterministic Eastern Time (`America/New_York`) datetime-local defaults, and inline field-level error alerts.
 
 #### Files Touched
-- `apps/web/src/components/moves/move-form.tsx`
-- `apps/web/src/lib/validation/schemas.ts` *(verified & integrated against `@hookform/resolvers/zod` v7 + `zod` v4.6.7)*
+- `web/src/components/moves/move-form.tsx`
+- `web/src/lib/validation/schemas.ts` *(verified & integrated against `@hookform/resolvers/zod` v7 + `zod` v4.6.7)*
 
 #### Architectural & Validation Rationale
 1. **Zod v4 + `@hookform/resolvers` v7 Type Alignment:** `moveFormSchema` uses strictly typed primitives and `z.enum(...)` tuples without `.transform(...)` mutations that diverge input vs. output types, ensuring `z.infer<typeof moveFormSchema>` (`MoveFormValues`) matches both `z4.input<T>` and `z4.output<T>` in `zodResolver(moveFormSchema)` with zero `as any` casts.
@@ -232,7 +232,7 @@ Build the reusable `MoveForm` (`mode: "create" | "edit"`) backed by `useForm<Mov
 #### Implementation Excerpts
 
 ```tsx
-// apps/web/src/components/moves/move-form.tsx (Deterministic ET Defaults & Hydration Sync)
+// web/src/components/moves/move-form.tsx (Deterministic ET Defaults & Hydration Sync)
 function computeDefaultTimesFromAnchor(anchorIso: string): {
   startLocal: string;
   endLocal: string;
@@ -280,7 +280,7 @@ useEffect(() => {
 ```
 
 ```ts
-// apps/web/src/lib/validation/schemas.ts (Cross-Field superRefine Invariants)
+// web/src/lib/validation/schemas.ts (Cross-Field superRefine Invariants)
   .superRefine((values, ctx) => {
     const startIso = nyLocalInputToUtcIso(values.startLocal);
     const endIso = nyLocalInputToUtcIso(values.endLocal);
@@ -335,8 +335,8 @@ useEffect(() => {
 Give hosts immediate, high-confidence visual feedback on how their Move card, audience visibility, and address-privacy rules behave before publishing—rendered simultaneously as a sticky desktop sidebar (`lg:sticky lg:top-20 lg:col-span-5`) and an on-demand `<Dialog>` ("Preview Move") for mobile/tablet viewports.
 
 #### Files Touched
-- `apps/web/src/components/moves/move-preview.tsx`
-- `apps/web/src/components/moves/move-form.tsx`
+- `web/src/components/moves/move-preview.tsx`
+- `web/src/components/moves/move-form.tsx`
 
 #### Architectural & Privacy Rationale
 Hosts creating off-campus or house-party Moves frequently worry about whether their exact street address is exposed on the public campus feed. `MovePreview` provides a two-tab `<Tabs>` toggle (`"GENERAL"` vs. `"UNLOCKED"`):
@@ -350,7 +350,7 @@ Hosts creating off-campus or house-party Moves frequently worry about whether th
 #### Implementation Excerpts
 
 ```tsx
-// apps/web/src/components/moves/move-preview.tsx (Address Unlocking Simulation Matrix)
+// web/src/components/moves/move-preview.tsx (Address Unlocking Simulation Matrix)
 const isGeneralView = perspective === "GENERAL";
 const canAttendeeUnlockExact =
   values.addressPrivacy === "PUBLIC_VENUE" ||
@@ -375,7 +375,7 @@ const showExactAddressInCurrentTab =
 Wire distinct **Save Draft** (`status: "DRAFT"`) and **Publish Move** (`status: "PUBLISHED"`) workflows into `SeshDataAdapter` (`localStorage`), surface clear prototype persistence notices, extract numeric USD metadata when present, and bridge newly published Moves directly into **Create Move Group** (`/move-groups/new?event=${saved.id}`).
 
 #### Files Touched
-- `apps/web/src/components/moves/move-form.tsx`
+- `web/src/components/moves/move-form.tsx`
 
 #### Architectural & Persistence Rationale
 1. **Dual Submit Intent Sharing Full Schema Validation:** Both **Save Draft** (`onClick={handleSubmit((vals) => submitWithStatus(vals, "DRAFT"))}`) and **Publish Move** (`type="submit"` -> `handleSubmit((vals) => submitWithStatus(vals, "PUBLISHED"))`) validate against `moveFormSchema` so drafts saved in `localStorage` never contain corrupt dates or broken privacy configurations.
@@ -386,7 +386,7 @@ Wire distinct **Save Draft** (`status: "DRAFT"`) and **Publish Move** (`status: 
 #### Implementation Excerpts
 
 ```tsx
-// apps/web/src/components/moves/move-form.tsx (Draft vs. Publish Persistence & Navigation)
+// web/src/components/moves/move-form.tsx (Draft vs. Publish Persistence & Navigation)
 const submitTimestampIso = new Date().toISOString();
 const saved =
   mode === "edit" && initialEvent
@@ -439,7 +439,7 @@ if (targetStatus === "DRAFT") {
 ```ts
 /**
  * @component   NewMovePage
- * @filepath    apps/web/src/app/events/new/page.tsx
+ * @filepath    web/src/app/(app)/events/new/page.tsx
  * @directive   "use client"
  * @route       GET /events/new
  *
@@ -475,7 +475,7 @@ export default function NewMovePage(): JSX.Element;
 ```ts
 /**
  * @component   EditMovePage
- * @filepath    apps/web/src/app/events/[id]/edit/page.tsx
+ * @filepath    web/src/app/(app)/events/[id]/edit/page.tsx
  * @directive   Server Component (default)
  * @route       GET /events/[id]/edit
  *
@@ -516,7 +516,7 @@ async function EditMoveLoader(props: {
 ```ts
 /**
  * @component   EditMoveView
- * @filepath    apps/web/src/components/moves/edit-move-view.tsx
+ * @filepath    web/src/components/moves/edit-move-view.tsx
  * @directive   "use client"
  *
  * @description
@@ -556,7 +556,7 @@ export function EditMoveView({ eventId }: EditMoveViewProps): JSX.Element;
 ```ts
 /**
  * @component   MoveForm
- * @filepath    apps/web/src/components/moves/move-form.tsx
+ * @filepath    web/src/components/moves/move-form.tsx
  * @directive   "use client"
  *
  * @description
@@ -663,7 +663,7 @@ function parseOptionalUsdAmount(priceLabel?: string): number | null;
 ```ts
 /**
  * @component   MovePreview
- * @filepath    apps/web/src/components/moves/move-preview.tsx
+ * @filepath    web/src/components/moves/move-preview.tsx
  * @directive   "use client"
  *
  * @description
@@ -707,7 +707,7 @@ export function MovePreview(props: MovePreviewProps): JSX.Element;
 ```ts
 /**
  * @schema      moveFormSchema
- * @filepath    apps/web/src/lib/validation/schemas.ts
+ * @filepath    web/src/lib/validation/schemas.ts
  * @library     Zod v4 (`zod@^4.6.7`)
  *
  * @description
@@ -808,19 +808,19 @@ Use these indexed invariants when debugging regressions, writing Vitest/Playwrig
 
 ### 6.2 CLI Verification Commands
 
-Run from the monorepo root (`/Users/rishikumar/Desktop/sesh`) or `apps/web` to validate all `1.04` contracts after any future schema or adapter refactor:
+Run from the monorepo root (`/Users/rishikumar/Desktop/sesh`) or `web` to validate all `1.04` contracts after any future schema or adapter refactor:
 
 ```bash
 # 1. Full TypeScript strict check (verifies RHF + Zod v4 resolver types)
 npm --workspace @sesh/web exec tsc -- --noEmit
 
 # 2. Targeted ESLint check across all 5 owned 1.04 files
-npx --prefix apps/web eslint \
-  apps/web/src/app/events/new/page.tsx \
-  "apps/web/src/app/events/[id]/edit/page.tsx" \
-  apps/web/src/components/moves/move-form.tsx \
-  apps/web/src/components/moves/move-preview.tsx \
-  apps/web/src/components/moves/edit-move-view.tsx
+npx --prefix web eslint \
+  web/src/app/(app)/events/new/page.tsx \
+  "web/src/app/(app)/events/[id]/edit/page.tsx" \
+  web/src/components/moves/move-form.tsx \
+  web/src/components/moves/move-preview.tsx \
+  web/src/components/moves/edit-move-view.tsx
 
 # 3. Vitest unit suite (validates moveFormSchema, dates.ts DST math, and adapter persistence)
 npm test

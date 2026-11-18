@@ -12,18 +12,18 @@
  * @iterations   1.02.1, 1.02.2, 1.02.3, 1.02.4
  * @owner        Agent 02 (Campus Discovery Feed, Filter Controls, Time-Bucketed Sections & Event Cards)
  * @status       Verified & Production-Ready (Next.js 16.4.6 Cache Components / PPR, React 19.3, TypeScript 5, ESLint 9)
- * @route        / (apps/web/src/app/page.tsx)
- * @see          ../../../../apps/web/src/app/page.tsx
- * @see          ../../../../apps/web/src/components/events/events-hub.tsx
- * @see          ../../../../apps/web/src/components/events/event-filters.tsx
- * @see          ../../../../apps/web/src/components/events/event-section.tsx
- * @see          ../../../../apps/web/src/components/events/event-card.tsx
- * @see          ../../../../apps/web/src/lib/events-filter.ts
- * @see          ../../../../apps/web/src/lib/dates.ts
- * @see          ../../../../apps/web/src/lib/context/sesh-provider.tsx
- * @see          ../../../../apps/web/src/lib/data/adapter.ts
- * @see          ../../../../apps/web/src/lib/permissions/policies.ts
- * @see          ../../../../apps/web/src/types/domain.ts
+ * @route        / (web/src/app/(app)/page.tsx)
+ * @see          ../../../../web/src/app/(app)/page.tsx
+ * @see          ../../../../web/src/components/events/events-hub.tsx
+ * @see          ../../../../web/src/components/events/event-filters.tsx
+ * @see          ../../../../web/src/components/events/event-section.tsx
+ * @see          ../../../../web/src/components/events/event-card.tsx
+ * @see          ../../../../web/src/lib/events-filter.ts
+ * @see          ../../../../web/src/lib/dates.ts
+ * @see          ../../../../web/src/lib/context/sesh-provider.tsx
+ * @see          ../../../../web/src/lib/data/adapter.ts
+ * @see          ../../../../web/src/lib/permissions/policies.ts
+ * @see          ../../../../web/src/types/domain.ts
  */
 ```
 
@@ -61,13 +61,13 @@
 
 ## 1. Executive Summary & Scope Boundaries
 
-Feature Agent 02 (`1.02` — **Events Hub**) owns the primary campus discovery feed mounted at `/` (`apps/web/src/app/page.tsx`) for **Sesh**, an 18+ social event discovery and group coordination platform launching at **Georgia Tech & Midtown Atlanta**.
+Feature Agent 02 (`1.02` — **Events Hub**) owns the primary campus discovery feed mounted at `/` (`web/src/app/(app)/page.tsx`) for **Sesh**, an 18+ social event discovery and group coordination platform launching at **Georgia Tech & Midtown Atlanta**.
 
 During Milestone 1 parallel multi-agent execution, strict file-ownership boundaries were enforced across five concurrent feature agents (`1.01` through `1.05`). Agent 02 exclusively authored and maintained five source files while consuming shared foundational contracts (`src/types/domain.ts`, `src/lib/context/sesh-provider.tsx`, `src/lib/data/adapter.ts`, `src/lib/events-filter.ts`, `src/lib/dates.ts`, and `src/components/shared/*`).
 
 ### Owned Artifact Inventory
 
-| File Path (relative to `apps/web/`) | Layer | Role & Responsibility |
+| File Path (relative to `web/`) | Layer | Role & Responsibility |
 | --- | --- | --- |
 | `src/app/page.tsx` | App Router Server Entry | Exports static route `metadata` and wraps `<EventsHub />` inside `<Suspense fallback={<EventGridSkeleton count={6} />}>` for Next.js 16 Partial Prerendering (`cacheComponents: true`). |
 | `src/components/events/events-hub.tsx` | Client Feature Orchestrator | Renders the `Georgia Tech` campus header, `Start a Move Group` (`/move-groups/new`) and `Create a Move` (`/events/new`) CTAs, `DemoNoticeBanner`, host-only `Your Saved Drafts` strip, `?q=` URL-synced filter state, ordered time-window sections, and filter-aware `EmptyState`. |
@@ -81,7 +81,7 @@ During Milestone 1 parallel multi-agent execution, strict file-ownership boundar
 
 ### 2.1 Partial Prerendering (PPR) & Suspense Boundary Architecture
 
-`@sesh/web` runs on **Next.js 16.4.6** with `cacheComponents: true` and `partialPrefetching: true` enabled in `apps/web/next.config.ts`. Under this model:
+`@sesh/web` runs on **Next.js 16.4.6** with `cacheComponents: true` and `partialPrefetching: true` enabled in `web/next.config.ts`. Under this model:
 
 1. **Static Route Shell Prerendering:** `HomePage` (`src/app/page.tsx`) is a pure synchronous Server Component with static `metadata`. At build time (`next build`), Next.js prerenders the outer layout shell and injects `<EventGridSkeleton count={6} />` as the instant streaming fallback.
 2. **Dynamic Request-Time / Client Hook Isolation:** `EventsHub` (`"use client"`) invokes `useSearchParams()` from `next/navigation` to synchronize with `?q=` search queries originating from the global `SiteHeader` search bar or shared deep links. Because `useSearchParams()` accesses dynamic URL query parameters, Next.js 16 requires a `<Suspense>` ancestor boundary above any component reading it; otherwise static shell generation aborts with a dynamic-access prerender error.
@@ -95,13 +95,13 @@ During Milestone 1 parallel multi-agent execution, strict file-ownership boundar
 └─────────────────────────────────────────┬─────────────────────────────────────────┘
                                           ▼
 ┌───────────────────────────────────────────────────────────────────────────────────┐
-│ HomePage (Server Component — apps/web/src/app/page.tsx)                           │
+│ HomePage (Server Component — web/src/app/(app)/page.tsx)                           │
 │  • Exports static Metadata ("Georgia Tech Events Hub | Sesh")                     │
 │  • Renders <Suspense fallback={<EventGridSkeleton count={6} />}>                  │
 └─────────────────────────────────────────┬─────────────────────────────────────────┘
                                           ▼
 ┌───────────────────────────────────────────────────────────────────────────────────┐
-│ EventsHub (Client Component — apps/web/src/components/events/events-hub.tsx)      │
+│ EventsHub (Client Component — web/src/components/events/events-hub.tsx)      │
 │  • Subscribes to SeshProvider: { adapter, viewer, nowIso, revision }              │
 │  • Reads URL query: urlQuery = useSearchParams().get("q") ?? ""                   │
 │  • Reconciles external urlQuery changes during render via [prevUrlQuery, search]  │
@@ -192,15 +192,15 @@ To prevent React hydration mismatches (`Text content does not match server-rende
 Audit all shared Milestone 1 domain types, adapter contracts, permission policies, `America/New_York` date utilities, shared UI primitives, and Next.js 16 `cacheComponents` constraints prior to authoring any Events Hub UI code.
 
 #### Files Inspected (Read-Only Audit)
-- `apps/web/src/types/domain.ts`
-- `apps/web/src/lib/context/sesh-provider.tsx`
-- `apps/web/src/lib/data/adapter.ts`
-- `apps/web/src/lib/permissions/policies.ts`
-- `apps/web/src/lib/dates.ts`
-- `apps/web/src/lib/events-filter.ts`
-- `apps/web/src/lib/mock/seed.ts`
-- `apps/web/src/components/shared/{page-header,empty-state,demo-notice-banner,loading-skeletons,user-avatar}.tsx`
-- `apps/web/next.config.ts`
+- `web/src/types/domain.ts`
+- `web/src/lib/context/sesh-provider.tsx`
+- `web/src/lib/data/adapter.ts`
+- `web/src/lib/permissions/policies.ts`
+- `web/src/lib/dates.ts`
+- `web/src/lib/events-filter.ts`
+- `web/src/lib/mock/seed.ts`
+- `web/src/components/shared/{page-header,empty-state,demo-notice-banner,loading-skeletons,user-avatar}.tsx`
+- `web/next.config.ts`
 
 #### Technical Rationale & Architectural Decisions
 1. **Suspense Isolation for `useSearchParams()`:** Confirmed `next.config.ts` enables `cacheComponents: true`. Any component calling `useSearchParams()` must sit beneath a `<Suspense>` boundary in `src/app/page.tsx` using `<EventGridSkeleton count={6} />` from `loading-skeletons.tsx` so static shell prerendering succeeds without opting the route shell out of PPR.
@@ -218,7 +218,7 @@ Audit all shared Milestone 1 domain types, adapter contracts, permission policie
 - Mapped `SeshContextValue.revision` into `EventsHub` memo dependencies because `adapter` is a stable singleton reference (`getSharedAdapter()`) whose internal `this.state.responses` array mutates in place on `setEventResponse`. Without depending on `revision`, `useMemo` would return stale RSVP states after clicking Save/Going.
 
 #### Verification
-Confirmed all required icons in `lucide-react` and UI primitives (`Card`, `Badge`, `Button`, `Input`, `DropdownMenu`, `Avatar`) were already installed in `apps/web/package.json` without needing any `npm install` modifications.
+Confirmed all required icons in `lucide-react` and UI primitives (`Card`, `Badge`, `Button`, `Input`, `DropdownMenu`, `Avatar`) were already installed in `web/package.json` without needing any `npm install` modifications.
 
 ---
 
@@ -228,11 +228,11 @@ Confirmed all required icons in `lucide-react` and UI primitives (`Card`, `Badge
 Implement all five Events Hub files (`page.tsx`, `events-hub.tsx`, `event-filters.tsx`, `event-section.tsx`, `event-card.tsx`) fulfilling campus discovery, live search, multi-axis filtering, host draft recovery, privacy-safe location rendering, and Guest-aware Save/RSVP interactions.
 
 #### Files Created / Modified
-- `apps/web/src/app/page.tsx` *(modified — replaced `create-next-app` boilerplate)*
-- `apps/web/src/components/events/events-hub.tsx` *(created)*
-- `apps/web/src/components/events/event-filters.tsx` *(created)*
-- `apps/web/src/components/events/event-section.tsx` *(created)*
-- `apps/web/src/components/events/event-card.tsx` *(created)*
+- `web/src/app/(app)/page.tsx` *(modified — replaced `create-next-app` boilerplate)*
+- `web/src/components/events/events-hub.tsx` *(created)*
+- `web/src/components/events/event-filters.tsx` *(created)*
+- `web/src/components/events/event-section.tsx` *(created)*
+- `web/src/components/events/event-card.tsx` *(created)*
 
 #### Key Implementation Details & Code Artifacts
 
@@ -300,11 +300,11 @@ Notice `failedCoverSrc !== event.coverImage` rather than a boolean `hasImgError`
 Verify static type safety, ESLint 9 (`eslint-config-next` 16.4.6 + React Compiler / Hooks rules), accessibility attributes, and strict render-phase determinism across all five owned files.
 
 #### Files Verified
-- `apps/web/src/app/page.tsx`
-- `apps/web/src/components/events/events-hub.tsx`
-- `apps/web/src/components/events/event-filters.tsx`
-- `apps/web/src/components/events/event-section.tsx`
-- `apps/web/src/components/events/event-card.tsx`
+- `web/src/app/(app)/page.tsx`
+- `web/src/components/events/events-hub.tsx`
+- `web/src/components/events/event-filters.tsx`
+- `web/src/components/events/event-section.tsx`
+- `web/src/components/events/event-card.tsx`
 
 #### Verification Checks Executed
 1. **ESLint Verification:**
@@ -333,12 +333,12 @@ Verify static type safety, ESLint 9 (`eslint-config-next` 16.4.6 + React Compile
 Align the secondary header CTA in `EventsHub` with Feature Agent 05's canonical Move Groups route tree (`/move-groups/new`, `/move-groups/[id]`, `/move-groups/[id]/manage`) so campus users can jump directly from the Events Hub header into creating a Move Group without hitting an unimplemented `/groups` route.
 
 #### File Modified
-- `apps/web/src/components/events/events-hub.tsx`
+- `web/src/components/events/events-hub.tsx`
 
 #### Technical Rationale
 During parallel development, Agent 05 mounted Move Group creation at `/move-groups/new` (matching the domain entity `MoveGroup` and `src/app/move-groups/new/page.tsx`), while individual Move Groups are discovered contextually inside `/events/[id]` (`EventMoveGroupsSection`) or created from `/move-groups/new`. Updating the secondary `PageHeader` action button in `EventsHub` from `/groups` to `/move-groups/new` (*Start a Move Group*) eliminated a broken cross-agent link and reinforced Sesh's core product loop (*see an event -> start or join a Move Group so nobody pulls up solo*).
 
-#### Final Code Implementation (`apps/web/src/components/events/events-hub.tsx`, lines 179–195)
+#### Final Code Implementation (`web/src/components/events/events-hub.tsx`, lines 179–195)
 ```tsx
         actions={
           <>
@@ -372,7 +372,7 @@ Re-ran `npm run lint`, `npm test` (Vitest suite), and `npm run build` (`next bui
 ```ts
 /**
  * @component    HomePage
- * @file         apps/web/src/app/page.tsx
+ * @file         web/src/app/(app)/page.tsx
  * @kind         Next.js App Router Server Component (Default Export)
  * @route        GET /
  *
@@ -404,7 +404,7 @@ Re-ran `npm run lint`, `npm test` (Vitest suite), and `npm run build` (`next bui
  */
 ```
 
-#### Exact Source (`apps/web/src/app/page.tsx`)
+#### Exact Source (`web/src/app/(app)/page.tsx`)
 ```tsx
 import { Suspense } from "react";
 import type { Metadata } from "next";
@@ -433,7 +433,7 @@ export default function HomePage() {
 ```ts
 /**
  * @component    EventsHub
- * @file         apps/web/src/components/events/events-hub.tsx
+ * @file         web/src/components/events/events-hub.tsx
  * @kind         Client Component (`"use client"`)
  *
  * @description
@@ -506,7 +506,7 @@ export default function HomePage() {
 ```ts
 /**
  * @component    EventFilters
- * @file         apps/web/src/components/events/event-filters.tsx
+ * @file         web/src/components/events/event-filters.tsx
  * @kind         Controlled Client Component (`"use client"`)
  *
  * @description
@@ -579,7 +579,7 @@ export interface EventFiltersProps {
 ```ts
 /**
  * @component    EventSection
- * @file         apps/web/src/components/events/event-section.tsx
+ * @file         web/src/components/events/event-section.tsx
  * @kind         Client Component (`"use client"`)
  *
  * @description
@@ -639,7 +639,7 @@ export interface EventSectionProps {
 ```ts
 /**
  * @component    EventCard
- * @file         apps/web/src/components/events/event-card.tsx
+ * @file         web/src/components/events/event-card.tsx
  * @kind         Client Component (`"use client"`)
  *
  * @description
@@ -719,7 +719,7 @@ export interface EventCardProps {
 ```ts
 /**
  * @function     filterEvents
- * @file         apps/web/src/lib/events-filter.ts
+ * @file         web/src/lib/events-filter.ts
  *
  * @description
  * Pure, immutable filtering and chronological sorting pipeline invoked inside
@@ -745,7 +745,7 @@ export interface EventCardProps {
 
 /**
  * @function     groupEventsByTimeSection
- * @file         apps/web/src/lib/events-filter.ts
+ * @file         web/src/lib/events-filter.ts
  *
  * @description
  * Partitions an already-sorted `EventView[]` list into the five canonical Events Hub
@@ -769,7 +769,7 @@ export interface EventCardProps {
 ```ts
 /**
  * @function     classifyEventTimeWindow
- * @file         apps/web/src/lib/dates.ts
+ * @file         web/src/lib/dates.ts
  *
  * @description
  * Deterministically classifies an event's `[startIso, endIso)` interval into one of five
@@ -796,7 +796,7 @@ export interface EventCardProps {
 
 /**
  * @function     formatEventTimeRange
- * @file         apps/web/src/lib/dates.ts
+ * @file         web/src/lib/dates.ts
  *
  * @description
  * Formats `[startIso, endIso]` into a compact human-readable `America/New_York` schedule string

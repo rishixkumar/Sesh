@@ -8,10 +8,10 @@
 /**
  * @packageDocumentation
  * @track DS/Alg integrations (branch `ds-alg-integrations`)
- * @workspace @sesh/web (`apps/web`)
+ * @workspace @sesh/web (`web`)
  * @goal Rebuild Sesh's domain logic on explicit, reusable data structures and algorithms
  *       (hash maps, graphs, aggregation, filter/sort pipelines, search indexes, heaps/queues)
- *       encapsulated in classes and pure modules under `apps/web/src/lib/`.
+ *       encapsulated in classes and pure modules under `web/src/lib/`.
  * @integrations DS-01 … DS-06 (implemented sequentially; each builds on the previous)
  * @status DS-01 – DS-06 Verified (`npm test` 68/68 · `npm run lint` 0 errors · `tsc` 0 errors · `npm run build` 14/14 routes)
  */
@@ -21,11 +21,11 @@
 
 ## Ground Rules
 
-1. **Behavior is preserved.** Every integration must keep existing viewer-facing behavior and the Milestone 1 privacy invariants (`apps/web/src/lib/__tests__/milestone1.test.ts`) passing unchanged.
+1. **Behavior is preserved.** Every integration must keep existing viewer-facing behavior and the Milestone 1 privacy invariants (`web/src/lib/__tests__/milestone1.test.ts`) passing unchanged.
 2. **Records stay behind the projection boundary.** New structures operate on `*Record` data inside the adapter/policies, or on viewer-safe `*View` data in the UI — never leak records to components.
 3. **Classes for stateful structures, pure functions for policies.** Graphs, collections, indexes, and queues are classes; visibility/privacy rules remain pure functions.
 4. **No persisted-format changes.** `PersistedOverlayState` (`schemaVersion: 1`) in browser storage is not modified.
-5. **Every integration ships with tests** and passes `npm test`, `npm run lint`, `npx tsc --noEmit -p apps/web`, and `npm run build`.
+5. **Every integration ships with tests** and passes `npm test`, `npm run lint`, `npx tsc --noEmit -p web`, and `npm run build`.
 
 ---
 
@@ -57,7 +57,7 @@ export function groupBy<T, K>(items: Iterable<T>, keyFn: (item: T) => K): Map<K,
 
 **Why:** `LocalMockSeshAdapter` resolved almost every lookup with linear `.find` / `.filter` scans, and `getAllEventRecords()` regenerated the full seed dataset on every call.
 
-**Indexes added to `LocalMockSeshAdapter`** (`apps/web/src/lib/data/adapter.ts`):
+**Indexes added to `LocalMockSeshAdapter`** (`web/src/lib/data/adapter.ts`):
 
 | Lookup | Before | After |
 | --- | --- | --- |
@@ -106,7 +106,7 @@ export class Queue<T> { enqueue(item: T): void; dequeue(): T | undefined; peek()
 
 **Directed edges preserve each rule's exact semantics:**
 
-| Privacy rule (`apps/web/src/lib/permissions/policies.ts`) | Before | After |
+| Privacy rule (`web/src/lib/permissions/policies.ts`) | Before | After |
 | --- | --- | --- |
 | `FRIENDS` event visibility (`canViewEvent`) | viewer lists host **or** host lists viewer | `graph.areConnected(viewer, host)` |
 | `MY_NETWORK` group — friend of creator | viewer lists creator **or** creator lists viewer | `graph.areConnected(viewer, creator)` |
@@ -116,7 +116,7 @@ export class Queue<T> { enqueue(item: T): void; dequeue(): T | undefined; peek()
 
 `canViewEvent`, `canViewMoveGroup`, `projectEventForViewer`, `projectMoveGroupRoster`, and `projectMoveGroupForViewer` now take a `graph` argument instead of looking up host/creator `User` objects for their friend lists. `LocalMockSeshAdapter` builds one graph at construction and passes it to every projection. The unused `areFriends` helper was removed.
 
-**Friends page (`apps/web/src/app/friends/page.tsx`):**
+**Friends page (`web/src/app/(app)/friends/page.tsx`):**
 - Friends vs. other campus members → `graph.partition()`.
 - Each non-friend shows **"N mutual friends"** → `graph.mutualFriends()` via suggestions.
 - Non-friends are **ordered by friend-of-friend BFS** (`suggestFriends`, depth 3): most mutual friends first, then fewest hops. For Maya: Chloe (2 mutual, 2 hops) → Ramblin' Nights (1 mutual, 2 hops) → Tyler (0 mutual, 3 hops).

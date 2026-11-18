@@ -8,7 +8,7 @@
 /**
  * @packageDocumentation
  * @milestone 1 — Core Sesh MVP Frontend
- * @workspace @sesh/web (`apps/web`)
+ * @workspace @sesh/web (`web`)
  * @framework Next.js 16.4.6 (App Router · `cacheComponents: true` · `partialPrefetching: true`)
  * @timezone America/New_York (UTC ISO-8601 storage -> Eastern Time presentation)
  * @tracks 1.01, 1.02, 1.03, 1.04, 1.05
@@ -36,7 +36,7 @@ Each Milestone 1 feature track has its own dedicated folder and exhaustive **TSD
 
 Before dispatching Agents `01`–`05` in parallel, the managing agent established the shared domain, validation, timezone, privacy-projection, mock seed, and adapter contracts so all five tracks compiled against identical interfaces with zero cross-feature drift.
 
-### 1. Domain & Viewer-Projected Models (`apps/web/src/types/domain.ts`)
+### 1. Domain & Viewer-Projected Models (`web/src/types/domain.ts`)
 
 ```ts
 /**
@@ -65,7 +65,7 @@ Key architectural separation:
 
 ---
 
-### 2. Centralized Data Adapter (`apps/web/src/lib/data/adapter.ts`)
+### 2. Centralized Data Adapter (`web/src/lib/data/adapter.ts`)
 
 ```ts
 /**
@@ -112,7 +112,7 @@ export interface SeshDataAdapter {
 
 ---
 
-### 3. Reactive Hydration-Safe Store (`apps/web/src/lib/context/sesh-provider.tsx`)
+### 3. Reactive Hydration-Safe Store (`web/src/lib/context/sesh-provider.tsx`)
 
 ```ts
 /**
@@ -131,7 +131,7 @@ export interface SeshDataAdapter {
 
 ---
 
-### 4. Eastern Time (`America/New_York`) Utilities (`apps/web/src/lib/dates.ts`)
+### 4. Eastern Time (`America/New_York`) Utilities (`web/src/lib/dates.ts`)
 
 | Function | Signature | Purpose |
 | --- | --- | --- |
@@ -142,7 +142,7 @@ export interface SeshDataAdapter {
 
 ---
 
-### 5. Automated Unit Test Suite (`apps/web/src/lib/__tests__/milestone1.test.ts`)
+### 5. Automated Unit Test Suite (`web/src/lib/__tests__/milestone1.test.ts`)
 
 Run via `npm test` from the repository root (`vitest run`):
 
