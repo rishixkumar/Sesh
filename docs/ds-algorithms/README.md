@@ -13,7 +13,7 @@
  *       (hash maps, graphs, aggregation, filter/sort pipelines, search indexes, heaps/queues)
  *       encapsulated in classes and pure modules under `apps/web/src/lib/`.
  * @integrations DS-01 … DS-06 (implemented sequentially; each builds on the previous)
- * @status DS-01 – DS-05 Verified (`npm test` 58/58 · `npm run lint` 0 errors · `tsc` 0 errors · `npm run build` 14/14 routes)
+ * @status DS-01 – DS-06 Verified (`npm test` 68/68 · `npm run lint` 0 errors · `tsc` 0 errors · `npm run build` 14/14 routes)
  */
 ```
 
@@ -38,7 +38,7 @@
 | **`DS-03`** | **Aggregation Maps** | Single-pass group-by + count (`Map<eventId, RsvpTally>`), per-friend tallies, shared roster presenter | ✅ Done |
 | **`DS-04`** | **Filter Pipeline & Sorting** | Immutable short-circuit predicate pipeline, stable multi-key comparators, `EventCollection` | ✅ Done |
 | **`DS-05`** | **Search Index & Trie** | Suffix-trie inverted index, posting-set intersection, exact substring semantics | ✅ Done |
-| **`DS-06`** | **Queue & Binary Heap** | Binary-heap priority queue, top-K selection (reuses the `DS-02` FIFO `Queue`) | ⏳ Planned |
+| **`DS-06`** | **Queue & Binary Heap** | Binary-heap priority queue, stable top-K selection, prioritized `ActivityFeed` | ✅ Done |
 
 > **Deferred:** spatial indexing (grid hash / KD-tree) for the Map page — events have no coordinates yet, so there is nothing to index.
 
@@ -245,13 +245,54 @@ The index text is built with the same `eventSearchText` + `toEventHostSummary` u
 
 ---
 
-## DS-06 — Queue & Binary Heap ⏳
+## DS-06 — Queue & Binary Heap ✅
 
-| Feature | Structure | Algorithm |
+```ts
+/** @module lib/collections/priority-queue — array-backed binary heap. */
+export class PriorityQueue<T> {
+  constructor(compare: Comparator<T>);                                  // compare(a, b) < 0 => a served first
+  static from<T>(items: Iterable<T>, compare: Comparator<T>): PriorityQueue<T>; // bottom-up heapify, O(n)
+  push(item: T): void;              // O(log n) sift-up
+  pop(): T | undefined;             // O(log n) sift-down
+  replaceTop(item: T): T | undefined; // pop + push in one sift
+  peek(): T | undefined; size: number; isEmpty(): boolean;
+  drain(): T[];                     // heap sort, O(n log n)
+}
+
+/** Stable top-K: equals `toSorted(compare).slice(0, k)` in O(n log k) time, O(k) space. */
+export function topK<T>(items: Iterable<T>, k: number, compare: Comparator<T>): T[];
+
+/** @module lib/notifications/activity-feed — classify -> prioritize -> order. */
+export class ActivityFeed {
+  static build(input: { moveGroups: readonly MoveGroupView[]; events: readonly EventView[]; upcomingLimit?: number }): ActivityFeed;
+  static empty(): ActivityFeed;
+  readonly items: readonly ActivityItem[]; // HOST_REQUEST | PENDING_JOIN | UPCOMING_GOING
+  size: number;
+  countOf(kind: ActivityKind): number;
+}
+```
+
+**Algorithms:**
+- **Top-K:** a bounded *max*-heap of size `k` keeps the worst retained item at the root. Each new item is compared with the root in O(1) and replaces it in O(log k) only if it ranks better. A hidden sequence number breaks ties, so results match a stable sort.
+- **Feed ordering:** every item is ranked `(kind priority, arrival sequence)` — pending host requests → my pending joins → upcoming Going RSVPs (capped at 3 via `topK` by start time) — and heapified then drained.
+
+| Feature | Before | After |
 | --- | --- | --- |
-| `PriorityQueue` | Binary min/max heap | `O(log n)` push/pop; top-K selection |
-| `ActivityFeed` | Priority queue + FIFO queue | Classify → prioritize (pending host requests > my pending joins > upcoming Going) → order |
-| Notifications page | `ActivityFeed` | Replaces inline aggregation in `app/notifications/page.tsx` |
+| Notifications page (`app/notifications/page.tsx`) | Three inline arrays (`flatMap` / `filter` / `filter + slice`) rendered in three separate blocks | One `ActivityFeed`; the page renders `feed.items` with a `switch` on `kind` (card markup unchanged) |
+| Upcoming Going list | Filter all events, then `slice(0, 3)` | `topK(going, 3, byStartTime)` |
+| Header bell badge (`site-header.tsx`) | Its own `reduce` over pending requests | `ActivityFeed.countOf("HOST_REQUEST")` — same classification as the page |
+
+The FIFO `Queue` from DS-02 was not needed here: all feed items are known up front, so a heap alone handles the ordering.
+
+**Tests:** `priority-queue.test.ts` (10):
+- Heap order, `peek` / `size`, heapify, max-heap comparators, and `replaceTop`.
+- 300 randomized push/pop/heapify workloads checked against `toSorted`.
+- 500 randomized `topK` runs checked against a stable `toSorted().slice()`, including ties and edge-case `k` values.
+- `ActivityFeed` output matched a copy of the old inline page logic for all 7 seed members × 3 clocks, on seed data and again after every member sends join requests.
+
+Mutation check: breaking the heap's sift-down failed 6 tests, and removing `topK`'s tie-break failed 1.
+
+**Browser:** `/notifications` as Maya Patel shows 4 items (1 host request, then 3 Going RSVPs in start-time order), and the header badge reads 1.
 
 ---
 

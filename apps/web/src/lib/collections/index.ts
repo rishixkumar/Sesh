@@ -1,4 +1,5 @@
 export { Queue } from "./queue";
+export { PriorityQueue, topK } from "./priority-queue";
 
 /**
  * Builds a unique-key hash index over `items`.

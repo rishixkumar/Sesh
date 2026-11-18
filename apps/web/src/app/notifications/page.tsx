@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { useSesh } from "@/lib/context/sesh-provider";
 import { formatEventDateTime, formatMeetupTime } from "@/lib/dates";
+import { ActivityFeed } from "@/lib/notifications/activity-feed";
 
 const PLANNED_NOTIFICATION_CHANNELS = [
   {
@@ -66,46 +67,16 @@ export default function NotificationsPlaceholderPage() {
     revision,
   } = useSesh();
 
-  const { pendingRequestsForHost, myPendingJoinGroups, upcomingGoingEvents } =
-    useMemo(() => {
-      void revision;
-      if (viewer.mode !== "MEMBER") {
-        return {
-          pendingRequestsForHost: [],
-          myPendingJoinGroups: [],
-          upcomingGoingEvents: [],
-        };
-      }
+  const feed = useMemo(() => {
+    void revision;
+    if (viewer.mode !== "MEMBER") return ActivityFeed.empty();
+    return ActivityFeed.build({
+      moveGroups: adapter.listMoveGroups(viewer),
+      events: adapter.listEvents(viewer, {}, nowIso),
+    });
+  }, [adapter, viewer, nowIso, revision]);
 
-      const groups = adapter.listMoveGroups(viewer);
-      const events = adapter.listEvents(viewer, {}, nowIso);
-
-      const hostRequests = groups.flatMap((group) =>
-        (group.ownerManagement?.pendingRequests ?? []).map((req) => ({
-          group,
-          request: req,
-        }))
-      );
-
-      const viewerPending = groups.filter(
-        (group) => group.viewerRelation === "PENDING_REQUEST"
-      );
-
-      const going = events
-        .filter((evt) => evt.viewerResponse === "GOING")
-        .slice(0, 3);
-
-      return {
-        pendingRequestsForHost: hostRequests,
-        myPendingJoinGroups: viewerPending,
-        upcomingGoingEvents: going,
-      };
-    }, [adapter, viewer, nowIso, revision]);
-
-  const totalSimulatedItems =
-    pendingRequestsForHost.length +
-    myPendingJoinGroups.length +
-    upcomingGoingEvents.length;
+  const totalSimulatedItems = feed.size;
 
   return (
     <div className="space-y-6">
@@ -188,100 +159,126 @@ export default function NotificationsPlaceholderPage() {
           </div>
 
           <div className="space-y-2.5">
-            {pendingRequestsForHost.map(({ group, request }) => (
-              <Card
-                key={request.id}
-                size="sm"
-                className="border-amber-500/35 bg-amber-500/5"
-              >
-                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <UserAvatar
-                      user={request.user}
-                      className="mt-0.5 size-9 shrink-0"
-                    />
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge className="h-4 px-1.5 text-[10px]">
-                          Action Needed
-                        </Badge>
-                        <span className="text-sm font-semibold text-foreground">
-                          {request.user.displayName} requested to join{" "}
-                          {group.name}
-                        </span>
-                      </div>
-                      {request.note ? (
-                        <p className="text-xs text-muted-foreground">
-                          &ldquo;{request.note}&rdquo;
-                        </p>
-                      ) : null}
-                      <p className="text-[11px] text-muted-foreground">
-                        For {group.eventSummary.title} · Requested{" "}
-                        {formatEventDateTime(request.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <Button size="sm" asChild className="shrink-0">
-                    <Link href={`/move-groups/${group.id}`}>
-                      <span>Review Request</span>
-                      <ArrowRightIcon className="size-3.5" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-
-            {myPendingJoinGroups.map((group) => (
-              <Card key={group.id} size="sm">
-                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
-                        Pending Approval
-                      </Badge>
-                      <span className="text-sm font-medium text-foreground">
-                        Your request to join {group.name} is awaiting{" "}
-                        {group.roster.creator.displayName}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Meetup: {group.meetupSpot} ·{" "}
-                      {formatMeetupTime(group.meetupTime)}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild className="shrink-0">
-                    <Link href={`/move-groups/${group.id}`}>View Group</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-
-            {upcomingGoingEvents.map((event) => (
-              <Card key={event.id} size="sm">
-                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge
-                        variant="secondary"
-                        className="h-4 px-1.5 text-[10px]"
-                      >
-                        RSVP Going
-                      </Badge>
-                      <span className="text-sm font-medium text-foreground">
-                        {event.title}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatEventDateTime(event.startAt)} ·{" "}
-                      {event.publicDisplayLocation}
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild className="shrink-0">
-                    <Link href={`/events/${event.id}`}>Open Move</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {feed.items.map((item) => {
+              switch (item.kind) {
+                case "HOST_REQUEST": {
+                  const { group, request } = item;
+                  return (
+                    <Card
+                      key={item.key}
+                      size="sm"
+                      className="border-amber-500/35 bg-amber-500/5"
+                    >
+                      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <UserAvatar
+                            user={request.user}
+                            className="mt-0.5 size-9 shrink-0"
+                          />
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge className="h-4 px-1.5 text-[10px]">
+                                Action Needed
+                              </Badge>
+                              <span className="text-sm font-semibold text-foreground">
+                                {request.user.displayName} requested to join{" "}
+                                {group.name}
+                              </span>
+                            </div>
+                            {request.note ? (
+                              <p className="text-xs text-muted-foreground">
+                                &ldquo;{request.note}&rdquo;
+                              </p>
+                            ) : null}
+                            <p className="text-[11px] text-muted-foreground">
+                              For {group.eventSummary.title} · Requested{" "}
+                              {formatEventDateTime(request.createdAt)}
+                            </p>
+                          </div>
+                        </div>
+                        <Button size="sm" asChild className="shrink-0">
+                          <Link href={`/move-groups/${group.id}`}>
+                            <span>Review Request</span>
+                            <ArrowRightIcon className="size-3.5" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                case "PENDING_JOIN": {
+                  const { group } = item;
+                  return (
+                    <Card key={item.key} size="sm">
+                      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge
+                              variant="outline"
+                              className="h-4 px-1.5 text-[10px]"
+                            >
+                              Pending Approval
+                            </Badge>
+                            <span className="text-sm font-medium text-foreground">
+                              Your request to join {group.name} is awaiting{" "}
+                              {group.roster.creator.displayName}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Meetup: {group.meetupSpot} ·{" "}
+                            {formatMeetupTime(group.meetupTime)}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="shrink-0"
+                        >
+                          <Link href={`/move-groups/${group.id}`}>
+                            View Group
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                case "UPCOMING_GOING": {
+                  const { event } = item;
+                  return (
+                    <Card key={item.key} size="sm">
+                      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge
+                              variant="secondary"
+                              className="h-4 px-1.5 text-[10px]"
+                            >
+                              RSVP Going
+                            </Badge>
+                            <span className="text-sm font-medium text-foreground">
+                              {event.title}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formatEventDateTime(event.startAt)} ·{" "}
+                            {event.publicDisplayLocation}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="shrink-0"
+                        >
+                          <Link href={`/events/${event.id}`}>Open Move</Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+              }
+            })}
           </div>
         </section>
       )}

@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { DesktopNav } from "@/components/layout/desktop-nav";
 import { DemoIdentitySwitcher } from "@/components/layout/demo-identity-switcher";
 import { useSesh } from "@/lib/context/sesh-provider";
+import { ActivityFeed } from "@/lib/notifications/activity-feed";
 import { CAMPUS_NAME } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -206,12 +207,10 @@ export function SiteHeader() {
   const pendingAlertCount = useMemo(() => {
     void revision;
     if (viewer.mode !== "MEMBER") return 0;
-    const groups = adapter.listMoveGroups(viewer);
-    return groups.reduce(
-      (sum, group) =>
-        sum + (group.ownerManagement?.pendingRequests.length ?? 0),
-      0
-    );
+    return ActivityFeed.build({
+      moveGroups: adapter.listMoveGroups(viewer),
+      events: [],
+    }).countOf("HOST_REQUEST");
   }, [adapter, viewer, revision]);
 
   return (
