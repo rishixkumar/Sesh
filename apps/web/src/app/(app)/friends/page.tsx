@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2Icon,
   CompassIcon,
   EyeOffIcon,
+  SearchIcon,
   ShieldCheckIcon,
   UserCheckIcon,
   UsersIcon,
@@ -18,6 +19,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { DEMO_PERSONA_META } from "@/components/layout/demo-identity-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -28,11 +30,18 @@ import {
 } from "@/components/ui/card";
 import { useSesh } from "@/lib/context/sesh-provider";
 import { SEED_USERS } from "@/lib/mock/seed";
+import { normalizeSearchQuery } from "@/lib/events-filter";
+import { SearchIndex } from "@/lib/search/search-index";
+import { tallyFriendActivity } from "@/lib/social/friend-activity";
 import { FriendshipGraph } from "@/lib/social/friendship-graph";
 import { CAMPUS_NAME } from "@/types/domain";
 
 const CAMPUS_FRIENDSHIP_GRAPH = FriendshipGraph.fromUsers(SEED_USERS);
 const SUGGESTION_SEARCH_DEPTH = 3;
+const CAMPUS_PEOPLE_INDEX = new SearchIndex<string>();
+for (const user of SEED_USERS) {
+  CAMPUS_PEOPLE_INDEX.add(user.id, `${user.displayName} ${user.username}`);
+}
 
 export default function FriendsNetworkPage() {
   const {
@@ -79,6 +88,27 @@ export default function FriendsNetworkPage() {
       ),
     };
   }, [viewer]);
+
+  const [peopleQuery, setPeopleQuery] = useState("");
+  const peopleMatches = useMemo(() => {
+    const query = normalizeSearchQuery(peopleQuery).replace(/^@/, "");
+    return query ? CAMPUS_PEOPLE_INDEX.search(query) : null;
+  }, [peopleQuery]);
+  const visibleFriends = peopleMatches
+    ? friends.filter((u) => peopleMatches.has(u.id))
+    : friends;
+  const visibleOthers = peopleMatches
+    ? nonFriendCampusUsers.filter((u) => peopleMatches.has(u.id))
+    : nonFriendCampusUsers;
+
+  const activityFor = useMemo(
+    () =>
+      tallyFriendActivity(
+        visibleEvents,
+        friends.map((f) => f.id)
+      ),
+    [visibleEvents, friends]
+  );
 
   const handleSwitchPersona = (userId: string, displayName: string) => {
     setDemoIdentity(userId);
@@ -225,6 +255,30 @@ export default function FriendsNetworkPage() {
             </CardContent>
           </Card>
 
+          <div className="space-y-2">
+            <div className="relative w-full sm:max-w-sm">
+              <SearchIcon
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="search"
+                value={peopleQuery}
+                onChange={(e) => setPeopleQuery(e.target.value)}
+                placeholder="Search people by name or @username..."
+                aria-label="Search campus members"
+                className="h-9 pl-8"
+              />
+            </div>
+            {peopleMatches &&
+            visibleFriends.length === 0 &&
+            visibleOthers.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No campus members match &ldquo;{peopleQuery.trim()}&rdquo;.
+              </p>
+            ) : null}
+          </div>
+
           <section aria-labelledby="accepted-friends-heading" className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h2
@@ -232,7 +286,7 @@ export default function FriendsNetworkPage() {
                 className="flex items-center gap-2 text-base font-semibold text-foreground"
               >
                 <UserCheckIcon className="size-4 text-primary" />
-                <span>Accepted Georgia Tech Friends ({friends.length})</span>
+                <span>Accepted Georgia Tech Friends ({visibleFriends.length})</span>
               </h2>
             </div>
 
@@ -242,15 +296,15 @@ export default function FriendsNetworkPage() {
                 title="No Accepted Friends Yet"
                 description="This demo persona currently has no accepted GT friends."
               />
+            ) : visibleFriends.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No accepted friends match this search.
+              </p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {friends.map((friend) => {
-                  const hostedMoves = visibleEvents.filter(
-                    (evt) => evt.hostId === friend.id
-                  );
-                  const goingMoves = visibleEvents.filter((evt) =>
-                    evt.friendsGoing.some((fg) => fg.id === friend.id)
-                  );
+                {visibleFriends.map((friend) => {
+                  const { hostedCount, goingEvents: goingMoves } =
+                    activityFor(friend.id);
                   const isSwitchable = switchableIds.has(friend.id);
 
                   return (
@@ -289,8 +343,8 @@ export default function FriendsNetworkPage() {
 
                         <div className="flex flex-wrap gap-1.5">
                           <Badge variant="outline" className="text-[10px]">
-                            Hosting {hostedMoves.length}{" "}
-                            {hostedMoves.length === 1 ? "Move" : "Moves"}
+                            Hosting {hostedCount}{" "}
+                            {hostedCount === 1 ? "Move" : "Moves"}
                           </Badge>
                           <Badge variant="secondary" className="text-[10px]">
                             Going to {goingMoves.length}{" "}
@@ -353,7 +407,7 @@ export default function FriendsNetworkPage() {
                 <EyeOffIcon className="size-4 text-muted-foreground" />
                 <span>
                   Other Campus Members Outside {viewer.user.displayName.split(" ")[0]}
-                  &apos;s Friend Graph ({nonFriendCampusUsers.length})
+                  &apos;s Friend Graph ({visibleOthers.length})
                 </span>
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -368,7 +422,7 @@ export default function FriendsNetworkPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {nonFriendCampusUsers.map((campusUser) => {
+              {visibleOthers.map((campusUser) => {
                 const isSwitchable = switchableIds.has(campusUser.id);
                 const mutualCount = mutualCountById.get(campusUser.id) ?? 0;
                 return (

@@ -38,6 +38,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSesh, type DemoIdentityChoice } from "@/lib/context/sesh-provider";
 import { formatEventTimeRange, formatMeetupTime } from "@/lib/dates";
+import { EventCollection } from "@/lib/events/event-collection";
 import { CAMPUS_NAME, type EventResponseType } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -70,16 +71,14 @@ export default function ProfilePage() {
       };
     }
 
-    const events = adapter.listEvents(
-      viewer,
-      { includeDraftsOwnedByViewer: true },
-      nowIso
+    const events = EventCollection.from(
+      adapter.listEvents(viewer, { includeDraftsOwnedByViewer: true }, nowIso)
     );
     const groups = adapter.listMoveGroups(viewer);
 
     return {
-      hostedMoves: events.filter((evt) => evt.hostId === viewer.user.id),
-      rsvpAndSavedMoves: events.filter((evt) => evt.viewerResponse !== null),
+      hostedMoves: events.hostedBy(viewer.user.id).toArray(),
+      rsvpAndSavedMoves: events.withViewerResponse().toArray(),
       myMoveGroups: groups.filter(
         (grp) =>
           grp.viewerRelation === "CREATOR" ||

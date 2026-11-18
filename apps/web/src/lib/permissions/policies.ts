@@ -1,7 +1,6 @@
 import type {
   EnrichedJoinRequest,
   EventRecord,
-  EventResponse,
   EventView,
   MaskedMemberEntry,
   MoveGroupOwnerManagementView,
@@ -15,6 +14,7 @@ import type {
   ViewerSession,
 } from "@/types/domain";
 import type { FriendshipGraph } from "@/lib/social/friendship-graph";
+import type { RsvpTally } from "@/lib/events/rsvp-aggregator";
 
 /**
  * PROTOTYPE SECURITY NOTICE:
@@ -124,23 +124,13 @@ export function getPrivateAddressHint(event: EventRecord): string | undefined {
   }
 }
 
-export function projectEventForViewer(params: {
-  event: EventRecord;
-  viewer: ViewerSession;
-  usersById: Map<string, User>;
-  graph: FriendshipGraph;
-  responses: EventResponse[];
-  eventMoveGroups: MoveGroupRecord[];
-}): EventView | null {
-  const { event, viewer, usersById, graph, responses, eventMoveGroups } =
-    params;
+/** Public host identity for an event, with a placeholder for unknown hosts. */
+export function toEventHostSummary(
+  event: EventRecord,
+  usersById: Map<string, User>
+): PublicUserSummary {
   const hostUser = usersById.get(event.hostId);
-
-  if (!canViewEvent(event, viewer, graph)) {
-    return null;
-  }
-
-  const hostSummary: PublicUserSummary = hostUser
+  return hostUser
     ? toPublicUserSummary(hostUser)
     : {
         id: event.hostId,
@@ -149,20 +139,27 @@ export function projectEventForViewer(params: {
         schoolId: event.schoolId,
         verifiedStudent: true,
       };
+}
 
-  const eventResponses = responses.filter((r) => r.eventId === event.id);
-  const goingResponses = eventResponses.filter((r) => r.response === "GOING");
-  const interestedCount = eventResponses.filter(
-    (r) => r.response === "INTERESTED"
-  ).length;
-  const savedCount = eventResponses.filter(
-    (r) => r.response === "SAVED"
-  ).length;
+export function projectEventForViewer(params: {
+  event: EventRecord;
+  viewer: ViewerSession;
+  usersById: Map<string, User>;
+  graph: FriendshipGraph;
+  rsvp: RsvpTally;
+  eventMoveGroups: MoveGroupRecord[];
+}): EventView | null {
+  const { event, viewer, usersById, graph, rsvp, eventMoveGroups } = params;
 
+  if (!canViewEvent(event, viewer, graph)) {
+    return null;
+  }
+
+  const hostSummary = toEventHostSummary(event, usersById);
   const viewerId = viewer.mode === "MEMBER" ? viewer.user.id : null;
-  const viewerResponseRecord = viewerId
-    ? eventResponses.find((r) => r.userId === viewerId)
-    : undefined;
+  const viewerResponse = viewerId
+    ? (rsvp.responseByUserId.get(viewerId) ?? null)
+    : null;
 
   const activeGroups = eventMoveGroups.filter((g) => !g.disbanded);
   const visibleGroupCount = activeGroups.filter((group) =>
@@ -177,15 +174,15 @@ export function projectEventForViewer(params: {
   const unlockAddress = canViewPrivateAddress({
     event,
     viewer,
-    viewerGoing: viewerResponseRecord?.response === "GOING",
+    viewerGoing: viewerResponse === "GOING",
     viewerInApprovedMoveGroup,
   });
 
   const friendsGoing: PublicUserSummary[] =
     viewer.mode === "MEMBER"
-      ? goingResponses
-          .filter((r) => graph.hasEdge(viewer.user.id, r.userId))
-          .map((r) => usersById.get(r.userId))
+      ? rsvp.goingUserIds
+          .filter((userId) => graph.hasEdge(viewer.user.id, userId))
+          .map((userId) => usersById.get(userId))
           .filter((u): u is User => Boolean(u))
           .map(toPublicUserSummary)
       : [];
@@ -214,11 +211,11 @@ export function projectEventForViewer(params: {
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
     source: event.source,
-    goingCount: goingResponses.length,
-    interestedCount,
-    savedCount,
+    goingCount: rsvp.goingCount,
+    interestedCount: rsvp.interestedCount,
+    savedCount: rsvp.savedCount,
     friendsGoing,
-    viewerResponse: viewerResponseRecord?.response ?? null,
+    viewerResponse,
     moveGroupCount: visibleGroupCount,
     canEdit: Boolean(viewerId && viewerId === event.hostId),
   };

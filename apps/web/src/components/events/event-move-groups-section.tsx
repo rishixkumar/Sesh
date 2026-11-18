@@ -27,12 +27,12 @@ import {
 } from "@/components/ui/card";
 import { useSesh } from "@/lib/context/sesh-provider";
 import { formatMeetupTime } from "@/lib/dates";
+import { describeRoster } from "@/lib/move-groups/roster-presenter";
 import { cn } from "@/lib/utils";
 import type {
   EventView,
   MoveGroupDiscoverability,
   MoveGroupJoinMode,
-  MoveGroupView,
   ViewerMoveGroupRelation,
 } from "@/types/domain";
 
@@ -85,45 +85,6 @@ function renderViewerRelationBadge(relation: ViewerMoveGroupRelation) {
     case "NONE":
       return null;
   }
-}
-
-function renderRosterSummaryText(group: MoveGroupView): string {
-  const { roster } = group;
-  const visibleFriendCount = roster.visibleMembers.filter(
-    (m) => m.isFriend
-  ).length;
-
-  if (roster.isFullRosterVisible) {
-    if (roster.visibleMembers.length === 0) {
-      return "Just the organizer so far — full member roster unlocked.";
-    }
-    const names = roster.visibleMembers.map((m) => m.displayName).join(", ");
-    return `With ${names} (full member roster unlocked).`;
-  }
-
-  const segments: string[] = [];
-  if (roster.visibleMembers.length > 0) {
-    const names = roster.visibleMembers.map((m) => m.displayName).join(", ");
-    segments.push(
-      visibleFriendCount === 1
-        ? `Includes your friend ${names}`
-        : `Includes your friends ${names}`
-    );
-  }
-
-  if (roster.anonymousMemberCount > 0) {
-    segments.push(
-      `+${roster.anonymousMemberCount} other GT ${
-        roster.anonymousMemberCount === 1 ? "student" : "students"
-      } (identities hidden until joined)`
-    );
-  }
-
-  if (segments.length === 0) {
-    return "Hosted by organizer — spots open to coordinate heading over together.";
-  }
-
-  return segments.join(" · ");
 }
 
 export interface EventMoveGroupsSectionProps {
@@ -327,7 +288,7 @@ export function EventMoveGroupsSection({
                       ) : (
                         <EyeIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
                       )}
-                      <span>{renderRosterSummaryText(group)}</span>
+                      <span>{describeRoster(group.roster)}</span>
                     </div>
                   </div>
                 </CardContent>

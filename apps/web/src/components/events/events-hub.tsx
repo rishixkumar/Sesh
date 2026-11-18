@@ -24,11 +24,16 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { useSesh } from "@/lib/context/sesh-provider";
 import { formatEventTimeRange } from "@/lib/dates";
-import { groupEventsByTimeSection } from "@/lib/events-filter";
+import {
+  hasActiveEventFilters,
+  TIME_WINDOW_SECTION_KEY,
+} from "@/lib/events-filter";
+import { EventCollection } from "@/lib/events/event-collection";
 import {
   CAMPUS_AREA_LABEL,
   CAMPUS_NAME,
   type EventCategory,
+  type EventFilterCriteria,
   type PriceFilter,
   type TimeWindowFilter,
 } from "@/types/domain";
@@ -89,26 +94,24 @@ export function EventsHub() {
     setSearch(urlQuery);
   }
 
-  const events = useMemo(() => {
+  const criteria: EventFilterCriteria = useMemo(
+    () => ({
+      search,
+      category,
+      price,
+      timeWindow,
+      includeDraftsOwnedByViewer: viewer.mode === "MEMBER",
+    }),
+    [search, category, price, timeWindow, viewer.mode]
+  );
+
+  const sections = useMemo(() => {
     // Reference `revision` so adapter mutations (RSVPs, edits, resets) invalidate memo cleanly
     void revision;
-    return adapter.listEvents(
-      viewer,
-      {
-        search,
-        category,
-        price,
-        timeWindow,
-        includeDraftsOwnedByViewer: viewer.mode === "MEMBER",
-      },
-      nowIso
-    );
-  }, [adapter, viewer, search, category, price, timeWindow, nowIso, revision]);
-
-  const sections = useMemo(
-    () => groupEventsByTimeSection(events, nowIso),
-    [events, nowIso]
-  );
+    return EventCollection.from(
+      adapter.listEvents(viewer, criteria, nowIso)
+    ).groupByTimeSection(nowIso);
+  }, [adapter, viewer, criteria, nowIso, revision]);
 
   const publishedCount =
     sections.happeningNow.length +
@@ -116,11 +119,7 @@ export function EventsHub() {
     sections.thisWeekend.length +
     sections.upcoming.length;
 
-  const hasActiveFilters =
-    search.trim().length > 0 ||
-    category !== "ALL" ||
-    price !== "ALL" ||
-    timeWindow !== "ALL";
+  const hasActiveFilters = hasActiveEventFilters(criteria);
 
   const handleSearchChange = (nextValue: string) => {
     setSearch(nextValue);
@@ -138,19 +137,6 @@ export function EventsHub() {
     if (urlQuery.length > 0) {
       setPrevUrlQuery("");
       router.replace(pathname, { scroll: false });
-    }
-  };
-
-  const getSectionEvents = (bucket: Exclude<TimeWindowFilter, "ALL">) => {
-    switch (bucket) {
-      case "HAPPENING_NOW":
-        return sections.happeningNow;
-      case "TONIGHT":
-        return sections.tonight;
-      case "THIS_WEEKEND":
-        return sections.thisWeekend;
-      case "UPCOMING":
-        return sections.upcoming;
     }
   };
 
@@ -352,7 +338,7 @@ export function EventsHub() {
           id={SECTION_META[timeWindow].id}
           title={SECTION_META[timeWindow].title}
           subtitle={SECTION_META[timeWindow].subtitle}
-          events={getSectionEvents(timeWindow)}
+          events={sections[TIME_WINDOW_SECTION_KEY[timeWindow]]}
           isLive={SECTION_META[timeWindow].isLive}
           icon={SECTION_META[timeWindow].icon}
         />
