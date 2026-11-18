@@ -37,6 +37,7 @@ export async function generateMetadata({
   return buildCachedPublicMetadata(id);
 }
 
+
 async function EventDetailLoader({
   params,
 }: {
