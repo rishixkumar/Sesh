@@ -24,10 +24,18 @@ import {
   projectEventForViewer,
   projectMoveGroupForViewer,
   projectPublicEventMetadata,
+  toEventHostSummary,
 } from "@/lib/permissions/policies";
-import { filterEvents } from "@/lib/events-filter";
+import {
+  eventSearchText,
+  filterEvents,
+  normalizeSearchQuery,
+} from "@/lib/events-filter";
+import { SearchIndex } from "@/lib/search/search-index";
 import { groupBy, indexBy } from "@/lib/collections";
+import { compareBy, isoTime } from "@/lib/collections/comparators";
 import { FriendshipGraph } from "@/lib/social/friendship-graph";
+import { RsvpAggregator } from "@/lib/events/rsvp-aggregator";
 
 export const SESH_STORAGE_KEY = "sesh.m1.demo-store.v1";
 export const SESH_SESSION_STORAGE_KEY = "sesh.m1.demo-viewer.v1";
@@ -168,6 +176,10 @@ function cloneDeep<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj)) as T;
 }
 
+const byMeetupTime = compareBy<MoveGroupView>((group) =>
+  isoTime(group.meetupTime)
+);
+
 export class LocalMockSeshAdapter implements SeshDataAdapter {
   private storage: StorageLike | null = null;
   private state: PersistedOverlayState;
@@ -186,7 +198,8 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
   private moveGroupsByIdCache: Map<string, MoveGroupRecord> | null = null;
   private moveGroupsByEventIdCache: Map<string, MoveGroupRecord[]> | null =
     null;
-  private responsesByEventIdCache: Map<string, EventResponse[]> | null = null;
+  private rsvpAggregatorCache: RsvpAggregator | null = null;
+  private eventSearchIndexCache: SearchIndex<string> | null = null;
 
   constructor(options?: { anchorIso?: string; storage?: StorageLike | null }) {
     const initialAnchor = options?.anchorIso ?? STATIC_FALLBACK_ANCHOR_ISO;
@@ -216,7 +229,8 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     this.eventsByIdCache = null;
     this.moveGroupsByIdCache = null;
     this.moveGroupsByEventIdCache = null;
-    this.responsesByEventIdCache = null;
+    this.rsvpAggregatorCache = null;
+    this.eventSearchIndexCache = null;
   }
 
   /** Finalizes an in-place state mutation: drops indexes, persists, notifies. */
@@ -351,12 +365,30 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     return group && !group.disbanded ? group : undefined;
   }
 
-  private getResponsesByEventId(): Map<string, EventResponse[]> {
-    this.responsesByEventIdCache ??= groupBy(
-      this.state.responses,
-      (r) => r.eventId
+  /** Built over records; search fields match the viewer projection exactly. */
+  private getEventSearchIndex(): SearchIndex<string> {
+    if (!this.eventSearchIndexCache) {
+      const index = new SearchIndex<string>();
+      for (const record of this.getAllEventRecords()) {
+        index.add(
+          record.id,
+          eventSearchText({
+            ...record,
+            publicDisplayLocation: record.publicDisplayLocation || record.venue,
+            host: toEventHostSummary(record, this.usersById),
+          })
+        );
+      }
+      this.eventSearchIndexCache = index;
+    }
+    return this.eventSearchIndexCache;
+  }
+
+  private getRsvpAggregator(): RsvpAggregator {
+    this.rsvpAggregatorCache ??= RsvpAggregator.fromResponses(
+      this.state.responses
     );
-    return this.responsesByEventIdCache;
+    return this.rsvpAggregatorCache;
   }
 
   private findResponseIndex(eventId: string, userId: string): number {
@@ -374,7 +406,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       viewer,
       usersById: this.usersById,
       graph: this.friendshipGraph,
-      responses: this.getResponsesByEventId().get(event.id) ?? [],
+      rsvp: this.getRsvpAggregator().forEvent(event.id),
       eventMoveGroups: this.getMoveGroupsByEventId().get(event.id) ?? [],
     });
   }
@@ -401,7 +433,12 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       .map((event) => this.projectEvent(event, viewer))
       .filter((v): v is EventView => Boolean(v));
 
-    return filterEvents(projected, criteria, effectiveNow);
+    const query = normalizeSearchQuery(criteria.search);
+    return filterEvents(projected, criteria, effectiveNow, {
+      searchMatches: query
+        ? this.getEventSearchIndex().search(query)
+        : undefined,
+    });
   }
 
   getEvent(eventId: string, viewer: ViewerSession): EventLookupResult {
@@ -608,10 +645,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
         })
       )
       .filter((v): v is MoveGroupView => Boolean(v))
-      .toSorted(
-        (a, b) =>
-          new Date(a.meetupTime).getTime() - new Date(b.meetupTime).getTime()
-      );
+      .toSorted(byMeetupTime);
   }
 
   getMoveGroup(groupId: string, viewer: ViewerSession): MoveGroupLookupResult {
@@ -1051,18 +1085,15 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     savedCount: number;
     viewerResponse: EventResponseType | null;
   } {
-    const eventResponses = this.getResponsesByEventId().get(eventId) ?? [];
+    const rsvp = this.getRsvpAggregator();
+    const tally = rsvp.forEvent(eventId);
     const viewerId = viewer.mode === "MEMBER" ? viewer.user.id : null;
-    const viewerRow = viewerId
-      ? eventResponses.find((r) => r.userId === viewerId)
-      : undefined;
 
     return {
-      goingCount: eventResponses.filter((r) => r.response === "GOING").length,
-      interestedCount: eventResponses.filter((r) => r.response === "INTERESTED")
-        .length,
-      savedCount: eventResponses.filter((r) => r.response === "SAVED").length,
-      viewerResponse: viewerRow?.response ?? null,
+      goingCount: tally.goingCount,
+      interestedCount: tally.interestedCount,
+      savedCount: tally.savedCount,
+      viewerResponse: rsvp.viewerResponse(eventId, viewerId),
     };
   }
 

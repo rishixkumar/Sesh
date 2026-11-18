@@ -1,9 +1,19 @@
-import type { EventFilterCriteria, EventView } from "@/types/domain";
+import type {
+  EventFilterCriteria,
+  EventView,
+  TimeWindowFilter,
+} from "@/types/domain";
 import {
   classifyEventTimeWindow,
   matchesTimeWindowFilter,
   type EventTimeBucket,
 } from "@/lib/dates";
+import { FilterPipeline } from "@/lib/collections/filter-pipeline";
+import {
+  compareBy,
+  isoTime,
+  type Comparator,
+} from "@/lib/collections/comparators";
 
 export interface GroupedEventsHubSections {
   happeningNow: EventView[];
@@ -13,61 +23,114 @@ export interface GroupedEventsHubSections {
   drafts: EventView[];
 }
 
-export function filterEvents(
-  events: EventView[],
+export const TIME_WINDOW_SECTION_KEY: Record<
+  Exclude<TimeWindowFilter, "ALL">,
+  Exclude<keyof GroupedEventsHubSections, "drafts">
+> = {
+  HAPPENING_NOW: "happeningNow",
+  TONIGHT: "tonight",
+  THIS_WEEKEND: "thisWeekend",
+  UPCOMING: "upcoming",
+};
+
+export const byStartTime: Comparator<EventView> = compareBy((event) =>
+  isoTime(event.startAt)
+);
+
+export function normalizeSearchQuery(search: string | undefined): string {
+  return search?.trim().toLowerCase() ?? "";
+}
+
+export function hasActiveEventFilters(criteria: EventFilterCriteria): boolean {
+  return (
+    normalizeSearchQuery(criteria.search).length > 0 ||
+    (criteria.category ?? "ALL") !== "ALL" ||
+    (criteria.price ?? "ALL") !== "ALL" ||
+    (criteria.timeWindow ?? "ALL") !== "ALL"
+  );
+}
+
+/** Lowercased text an event search query is matched against. */
+export function eventSearchText(event: {
+  title: string;
+  description: string;
+  venue: string;
+  publicDisplayLocation: string;
+  category: string;
+  host: { displayName: string; username: string };
+}): string {
+  return [
+    event.title,
+    event.description,
+    event.venue,
+    event.publicDisplayLocation,
+    event.category,
+    event.host.displayName,
+    event.host.username,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+export interface EventFilterOptions {
+  /**
+   * Precomputed ids matching `criteria.search` (e.g. from a `SearchIndex`).
+   * When omitted, search falls back to a linear substring scan.
+   */
+  searchMatches?: ReadonlySet<string>;
+}
+
+/**
+ * Builds the filter pipeline applied to published events. Stage order is
+ * cheapest first: time window (always on, since past events are never
+ * listed), category, price, then text search.
+ */
+export function buildEventFilterPipeline(
   criteria: EventFilterCriteria,
-  nowIso: string
-): EventView[] {
-  const query = criteria.search?.trim().toLowerCase() ?? "";
+  nowIso: string,
+  { searchMatches }: EventFilterOptions = {}
+): FilterPipeline<EventView> {
+  const query = normalizeSearchQuery(criteria.search);
   const category = criteria.category ?? "ALL";
   const price = criteria.price ?? "ALL";
   const timeWindow = criteria.timeWindow ?? "ALL";
 
-  return events
-    .filter((event) => {
-      if (event.status === "DRAFT") {
-        return Boolean(criteria.includeDraftsOwnedByViewer && event.canEdit);
-      }
-
-      if (!matchesTimeWindowFilter(event.startAt, event.endAt, nowIso, timeWindow)) {
-        return false;
-      }
-
-      if (category !== "ALL" && event.category !== category) {
-        return false;
-      }
-
-      if (price === "FREE" && !event.admission.isFree) {
-        return false;
-      }
-
-      if (price === "PAID" && event.admission.isFree) {
-        return false;
-      }
-
-      if (query.length > 0) {
-        const haystack = [
-          event.title,
-          event.description,
-          event.venue,
-          event.publicDisplayLocation,
-          event.category,
-          event.host.displayName,
-          event.host.username,
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        if (!haystack.includes(query)) {
-          return false;
-        }
-      }
-
-      return true;
-    })
-    .toSorted(
-      (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+  return FilterPipeline.empty<EventView>()
+    .where("timeWindow", (event) =>
+      matchesTimeWindowFilter(event.startAt, event.endAt, nowIso, timeWindow)
+    )
+    .whereIf(category !== "ALL", "category", (event) => event.category === category)
+    .whereIf(price === "FREE", "price", (event) => event.admission.isFree)
+    .whereIf(price === "PAID", "price", (event) => !event.admission.isFree)
+    .whereIf(
+      query.length > 0,
+      "search",
+      searchMatches
+        ? (event) => searchMatches.has(event.id)
+        : (event) => eventSearchText(event).includes(query)
     );
+}
+
+/**
+ * Drafts bypass the pipeline: they are listed only for their host (when
+ * requested) regardless of other filters. Results are sorted by start time.
+ */
+export function filterEvents(
+  events: EventView[],
+  criteria: EventFilterCriteria,
+  nowIso: string,
+  options: EventFilterOptions = {}
+): EventView[] {
+  const pipeline = buildEventFilterPipeline(criteria, nowIso, options);
+  const includeDrafts = Boolean(criteria.includeDraftsOwnedByViewer);
+
+  return events
+    .filter((event) =>
+      event.status === "DRAFT"
+        ? includeDrafts && event.canEdit
+        : pipeline.test(event)
+    )
+    .toSorted(byStartTime);
 }
 
 export function groupEventsByTimeSection(
@@ -94,22 +157,8 @@ export function groupEventsByTimeSection(
       nowIso
     );
 
-    switch (bucket) {
-      case "HAPPENING_NOW":
-        sections.happeningNow.push(event);
-        break;
-      case "TONIGHT":
-        sections.tonight.push(event);
-        break;
-      case "THIS_WEEKEND":
-        sections.thisWeekend.push(event);
-        break;
-      case "UPCOMING":
-        sections.upcoming.push(event);
-        break;
-      case "PAST":
-      default:
-        break;
+    if (bucket !== "PAST") {
+      sections[TIME_WINDOW_SECTION_KEY[bucket]].push(event);
     }
   }
 

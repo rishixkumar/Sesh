@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { formatMeetupTime } from "@/lib/dates";
+import { summarizeRoster } from "@/lib/move-groups/roster-presenter";
 import { cn } from "@/lib/utils";
 import type {
   MoveGroupDiscoverability,
@@ -98,9 +99,7 @@ export function MoveGroupCard({
   const relationInfo = VIEWER_RELATION_META[group.viewerRelation];
   const pendingCount = group.ownerManagement?.pendingRequests.length ?? 0;
 
-  const friendNames = group.roster.visibleMembers
-    .filter((m) => m.isFriend)
-    .map((m) => m.displayName.split(" ")[0]);
+  const { friendFirstNames: friendNames } = summarizeRoster(group.roster);
 
   return (
     <Card className={cn("flex h-full flex-col justify-between", className)}>
