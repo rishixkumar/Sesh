@@ -26,6 +26,7 @@ import {
   projectPublicEventMetadata,
 } from "@/lib/permissions/policies";
 import { filterEvents } from "@/lib/events-filter";
+import { groupBy, indexBy } from "@/lib/collections";
 
 export const SESH_STORAGE_KEY = "sesh.m1.demo-store.v1";
 export const SESH_SESSION_STORAGE_KEY = "sesh.m1.demo-viewer.v1";
@@ -172,6 +173,19 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
   private readonly usersById: Map<string, User>;
   private readonly listeners = new Set<() => void>();
 
+  /**
+   * Derived lookup indexes over `state`. Built lazily and dropped wholesale by
+   * `invalidateIndexes()` whenever state is replaced or mutated.
+   */
+  private seedEventsCache: { anchorIso: string; events: EventRecord[] } | null =
+    null;
+  private eventRecordsCache: EventRecord[] | null = null;
+  private eventsByIdCache: Map<string, EventRecord> | null = null;
+  private moveGroupsByIdCache: Map<string, MoveGroupRecord> | null = null;
+  private moveGroupsByEventIdCache: Map<string, MoveGroupRecord[]> | null =
+    null;
+  private responsesByEventIdCache: Map<string, EventResponse[]> | null = null;
+
   constructor(options?: { anchorIso?: string; storage?: StorageLike | null }) {
     const initialAnchor = options?.anchorIso ?? STATIC_FALLBACK_ANCHOR_ISO;
     this.usersById = new Map(SEED_USERS.map((u) => [u.id, u]));
@@ -185,7 +199,27 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
    */
   attachBrowserStorage(storage: StorageLike, runtimeNowIso: string): void {
     this.storage = storage;
-    this.state = this.loadOrCreateState(runtimeNowIso);
+    this.replaceState(this.loadOrCreateState(runtimeNowIso));
+    this.emit();
+  }
+
+  private replaceState(nextState: PersistedOverlayState): void {
+    this.state = nextState;
+    this.invalidateIndexes();
+  }
+
+  private invalidateIndexes(): void {
+    this.eventRecordsCache = null;
+    this.eventsByIdCache = null;
+    this.moveGroupsByIdCache = null;
+    this.moveGroupsByEventIdCache = null;
+    this.responsesByEventIdCache = null;
+  }
+
+  /** Finalizes an in-place state mutation: drops indexes, persists, notifies. */
+  private commit(): void {
+    this.invalidateIndexes();
+    this.persist();
     this.emit();
   }
 
@@ -265,16 +299,80 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     return `${prefix}-local-${this.state.nextSequence}`;
   }
 
+  /** Seed events depend only on `anchorIso`, so they survive invalidation. */
+  private getSeedEventRecords(): EventRecord[] {
+    const { anchorIso } = this.state;
+    if (this.seedEventsCache?.anchorIso !== anchorIso) {
+      this.seedEventsCache = {
+        anchorIso,
+        events: createSeedDataset(anchorIso).events,
+      };
+    }
+    return this.seedEventsCache.events;
+  }
+
   private getAllEventRecords(): EventRecord[] {
-    const seed = createSeedDataset(this.state.anchorIso);
-    const mergedSeed = seed.events.map(
-      (evt) => this.state.editedSeedEvents[evt.id] ?? evt
-    );
-    return [...mergedSeed, ...this.state.localEvents];
+    if (!this.eventRecordsCache) {
+      const mergedSeed = this.getSeedEventRecords().map(
+        (evt) => this.state.editedSeedEvents[evt.id] ?? evt
+      );
+      this.eventRecordsCache = [...mergedSeed, ...this.state.localEvents];
+    }
+    return this.eventRecordsCache;
+  }
+
+  private getEventsById(): Map<string, EventRecord> {
+    this.eventsByIdCache ??= indexBy(this.getAllEventRecords(), (e) => e.id);
+    return this.eventsByIdCache;
   }
 
   private findEventRecord(eventId: string): EventRecord | undefined {
-    return this.getAllEventRecords().find((e) => e.id === eventId);
+    return this.getEventsById().get(eventId);
+  }
+
+  private getMoveGroupsById(): Map<string, MoveGroupRecord> {
+    this.moveGroupsByIdCache ??= indexBy(this.state.moveGroups, (g) => g.id);
+    return this.moveGroupsByIdCache;
+  }
+
+  private getMoveGroupsByEventId(): Map<string, MoveGroupRecord[]> {
+    this.moveGroupsByEventIdCache ??= groupBy(
+      this.state.moveGroups,
+      (g) => g.eventId
+    );
+    return this.moveGroupsByEventIdCache;
+  }
+
+  private findActiveMoveGroup(groupId: string): MoveGroupRecord | undefined {
+    const group = this.getMoveGroupsById().get(groupId);
+    return group && !group.disbanded ? group : undefined;
+  }
+
+  private getResponsesByEventId(): Map<string, EventResponse[]> {
+    this.responsesByEventIdCache ??= groupBy(
+      this.state.responses,
+      (r) => r.eventId
+    );
+    return this.responsesByEventIdCache;
+  }
+
+  private findResponseIndex(eventId: string, userId: string): number {
+    return this.state.responses.findIndex(
+      (r) => r.eventId === eventId && r.userId === userId
+    );
+  }
+
+  private projectEvent(
+    event: EventRecord,
+    viewer: ViewerSession
+  ): EventView | null {
+    return projectEventForViewer({
+      event,
+      viewer,
+      usersById: this.usersById,
+      responses: this.getResponsesByEventId().get(event.id) ?? [],
+      eventMoveGroups: this.getMoveGroupsByEventId().get(event.id) ?? [],
+    });
   }
 
   private requireMember(viewer: ViewerSession, action: string): User {
@@ -296,17 +394,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     const records = this.getAllEventRecords();
 
     const projected = records
-      .map((event) =>
-        projectEventForViewer({
-          event,
-          viewer,
-          usersById: this.usersById,
-          responses: this.state.responses,
-          eventMoveGroups: this.state.moveGroups.filter(
-            (g) => g.eventId === event.id
-          ),
-        })
-      )
+      .map((event) => this.projectEvent(event, viewer))
       .filter((v): v is EventView => Boolean(v));
 
     return filterEvents(projected, criteria, effectiveNow);
@@ -318,15 +406,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       return { status: "NOT_FOUND" };
     }
 
-    const projected = projectEventForViewer({
-      event: record,
-      viewer,
-      usersById: this.usersById,
-      responses: this.state.responses,
-      eventMoveGroups: this.state.moveGroups.filter(
-        (g) => g.eventId === record.id
-      ),
-    });
+    const projected = this.projectEvent(record, viewer);
 
     if (!projected) {
       return {
@@ -420,8 +500,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       });
     }
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getEvent(newId, viewer);
     if (lookup.status !== "OK") {
@@ -498,8 +577,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       this.state.editedSeedEvents[eventId] = updated;
     }
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getEvent(eventId, viewer);
     if (lookup.status !== "OK") {
@@ -509,12 +587,13 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
   }
 
   listMoveGroups(viewer: ViewerSession, eventId?: string): MoveGroupView[] {
-    const eventsById = new Map(
-      this.getAllEventRecords().map((e) => [e.id, e])
-    );
+    const eventsById = this.getEventsById();
+    const candidates = eventId
+      ? (this.getMoveGroupsByEventId().get(eventId) ?? [])
+      : this.state.moveGroups;
 
-    return this.state.moveGroups
-      .filter((g) => !g.disbanded && (!eventId || g.eventId === eventId))
+    return candidates
+      .filter((g) => !g.disbanded)
       .map((group) =>
         projectMoveGroupForViewer({
           group,
@@ -531,7 +610,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
   }
 
   getMoveGroup(groupId: string, viewer: ViewerSession): MoveGroupLookupResult {
-    const group = this.state.moveGroups.find((g) => g.id === groupId);
+    const group = this.getMoveGroupsById().get(groupId);
     if (!group) {
       return { status: "NOT_FOUND" };
     }
@@ -611,9 +690,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     this.state.moveGroups.push(newGroup);
 
     // Ensure creator is also marked GOING on the parent event
-    const existingRespIdx = this.state.responses.findIndex(
-      (r) => r.eventId === input.eventId && r.userId === user.id
-    );
+    const existingRespIdx = this.findResponseIndex(input.eventId, user.id);
     if (existingRespIdx >= 0) {
       this.state.responses[existingRespIdx] = {
         userId: user.id,
@@ -630,8 +707,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       });
     }
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(newId, viewer);
     if (lookup.status !== "OK") {
@@ -648,9 +724,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     const user = this.requireMember(viewer, "join or request a Move Group");
     const nowIso = options?.nowIso ?? this.state.anchorIso;
 
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -723,8 +797,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     }
 
     group.updatedAt = nowIso;
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(groupId, viewer);
     if (lookup.status !== "OK") {
@@ -742,9 +815,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     const user = this.requireMember(viewer, "manage join requests");
     const effectiveNow = nowIso ?? this.state.anchorIso;
 
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -782,8 +853,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     }
 
     group.updatedAt = effectiveNow;
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(groupId, viewer);
     if (lookup.status !== "OK") {
@@ -801,9 +871,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     const user = this.requireMember(viewer, "manage join requests");
     const effectiveNow = nowIso ?? this.state.anchorIso;
 
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -826,8 +894,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     request.decidedAt = effectiveNow;
     group.updatedAt = effectiveNow;
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(groupId, viewer);
     if (lookup.status !== "OK") {
@@ -841,9 +908,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     viewer: ViewerSession
   ): MoveGroupView | null {
     const user = this.requireMember(viewer, "leave a Move Group");
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -868,8 +933,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       (r) => !(r.userId === user.id && r.status === "APPROVED")
     );
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(groupId, viewer);
     return lookup.status === "OK" ? lookup.group : null;
@@ -881,9 +945,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     viewer: ViewerSession
   ): MoveGroupView {
     const user = this.requireMember(viewer, "remove a member");
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -905,8 +967,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       (r) => !(r.userId === memberUserId && r.status === "APPROVED")
     );
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(groupId, viewer);
     if (lookup.status !== "OK") {
@@ -917,9 +978,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
 
   disbandMoveGroup(groupId: string, viewer: ViewerSession): void {
     const user = this.requireMember(viewer, "disband this Move Group");
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -931,8 +990,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     }
 
     group.disbanded = true;
-    this.persist();
-    this.emit();
+    this.commit();
   }
 
   updateMoveGroup(
@@ -942,9 +1000,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     nowIso?: string
   ): MoveGroupView {
     const user = this.requireMember(viewer, "update Move Group settings");
-    const group = this.state.moveGroups.find(
-      (g) => g.id === groupId && !g.disbanded
-    );
+    const group = this.findActiveMoveGroup(groupId);
     if (!group) {
       throw new SeshAdapterError("NOT_FOUND", "Move Group not found.");
     }
@@ -971,8 +1027,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     group.externalChatLink = input.externalChatLink?.trim() || undefined;
     group.updatedAt = nowIso ?? this.state.anchorIso;
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getMoveGroup(groupId, viewer);
     if (lookup.status !== "OK") {
@@ -990,9 +1045,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     savedCount: number;
     viewerResponse: EventResponseType | null;
   } {
-    const eventResponses = this.state.responses.filter(
-      (r) => r.eventId === eventId
-    );
+    const eventResponses = this.getResponsesByEventId().get(eventId) ?? [];
     const viewerId = viewer.mode === "MEMBER" ? viewer.user.id : null;
     const viewerRow = viewerId
       ? eventResponses.find((r) => r.userId === viewerId)
@@ -1021,9 +1074,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       throw new SeshAdapterError("NOT_FOUND", "Event not found.");
     }
 
-    const idx = this.state.responses.findIndex(
-      (r) => r.eventId === eventId && r.userId === user.id
-    );
+    const idx = this.findResponseIndex(eventId, user.id);
 
     if (response === null) {
       if (idx >= 0) {
@@ -1045,8 +1096,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       });
     }
 
-    this.persist();
-    this.emit();
+    this.commit();
 
     const lookup = this.getEvent(eventId, viewer);
     if (lookup.status !== "OK") {
@@ -1059,7 +1109,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
     if (this.storage) {
       this.storage.removeItem(SESH_STORAGE_KEY);
     }
-    this.state = this.loadOrCreateState(anchorIso);
+    this.replaceState(this.loadOrCreateState(anchorIso));
     this.emit();
   }
 }
