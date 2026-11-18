@@ -27,6 +27,7 @@ import {
 } from "@/lib/permissions/policies";
 import { filterEvents } from "@/lib/events-filter";
 import { groupBy, indexBy } from "@/lib/collections";
+import { FriendshipGraph } from "@/lib/social/friendship-graph";
 
 export const SESH_STORAGE_KEY = "sesh.m1.demo-store.v1";
 export const SESH_SESSION_STORAGE_KEY = "sesh.m1.demo-viewer.v1";
@@ -171,6 +172,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
   private storage: StorageLike | null = null;
   private state: PersistedOverlayState;
   private readonly usersById: Map<string, User>;
+  private readonly friendshipGraph: FriendshipGraph;
   private readonly listeners = new Set<() => void>();
 
   /**
@@ -188,7 +190,8 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
 
   constructor(options?: { anchorIso?: string; storage?: StorageLike | null }) {
     const initialAnchor = options?.anchorIso ?? STATIC_FALLBACK_ANCHOR_ISO;
-    this.usersById = new Map(SEED_USERS.map((u) => [u.id, u]));
+    this.usersById = indexBy(SEED_USERS, (u) => u.id);
+    this.friendshipGraph = FriendshipGraph.fromUsers(SEED_USERS);
     this.storage = options?.storage ?? null;
     this.state = this.loadOrCreateState(initialAnchor);
   }
@@ -370,6 +373,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       event,
       viewer,
       usersById: this.usersById,
+      graph: this.friendshipGraph,
       responses: this.getResponsesByEventId().get(event.id) ?? [],
       eventMoveGroups: this.getMoveGroupsByEventId().get(event.id) ?? [],
     });
@@ -600,6 +604,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
           event: eventsById.get(group.eventId),
           viewer,
           usersById: this.usersById,
+          graph: this.friendshipGraph,
         })
       )
       .filter((v): v is MoveGroupView => Boolean(v))
@@ -624,6 +629,7 @@ export class LocalMockSeshAdapter implements SeshDataAdapter {
       event,
       viewer,
       usersById: this.usersById,
+      graph: this.friendshipGraph,
     });
 
     if (!projected) {

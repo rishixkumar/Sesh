@@ -13,7 +13,7 @@
  *       (hash maps, graphs, aggregation, filter/sort pipelines, search indexes, heaps/queues)
  *       encapsulated in classes and pure modules under `apps/web/src/lib/`.
  * @integrations DS-01 … DS-06 (implemented sequentially; each builds on the previous)
- * @status DS-01 Verified (`npm test` 20/20 · `npm run lint` 0 errors · `tsc` 0 errors · `npm run build` 14/14 routes)
+ * @status DS-01, DS-02 Verified (`npm test` 29/29 · `npm run lint` 0 errors · `tsc` 0 errors · `npm run build` 14/14 routes)
  */
 ```
 
@@ -34,11 +34,11 @@
 | ID | Data Structure Family | Primary Structures / Algorithms | Status |
 | --- | --- | --- | --- |
 | **`DS-01`** | **Hash Maps & Sets** | `Map` indexes, single-pass `groupBy` / `indexBy`, lazy cache + invalidation | ✅ Done |
-| **`DS-02`** | **Graph** | Directed adjacency list `Map<userId, Set<userId>>`, edge checks, set intersection, BFS | ⏳ Planned |
+| **`DS-02`** | **Graph** | Directed adjacency list `Map<userId, Set<userId>>`, edge checks, set intersection, BFS + FIFO queue | ✅ Done |
 | **`DS-03`** | **Aggregation Maps** | Group-by + count (`Map<eventId, counts>`), mask-and-count partitions | ⏳ Planned |
 | **`DS-04`** | **Filter Pipeline & Sorting** | Composable predicate pipeline, stable multi-key comparators | ⏳ Planned |
 | **`DS-05`** | **Search Index & Trie** | Inverted index (`Map<token, Set<id>>`), prefix trie, posting-list intersection | ⏳ Planned |
-| **`DS-06`** | **Queue & Binary Heap** | FIFO queue, binary-heap priority queue, top-K selection | ⏳ Planned |
+| **`DS-06`** | **Queue & Binary Heap** | Binary-heap priority queue, top-K selection (reuses the `DS-02` FIFO `Queue`) | ⏳ Planned |
 
 > **Deferred:** spatial indexing (grid hash / KD-tree) for the Map page — events have no coordinates yet, so there is nothing to index.
 
@@ -80,15 +80,50 @@ export function groupBy<T, K>(items: Iterable<T>, keyFn: (item: T) => K): Map<K,
 
 ---
 
-## DS-02 — Graph ⏳
+## DS-02 — Graph ✅
 
-| Feature | Structure | Algorithm |
+```ts
+/**
+ * @module lib/social/friendship-graph
+ * @description Campus social graph as a directed adjacency list. Edge `A -> B` means A lists B in `friendIds`.
+ */
+export class FriendshipGraph {
+  static fromUsers(users: Iterable<Pick<User, "id" | "friendIds">>): FriendshipGraph;
+  hasEdge(fromId: string, toId: string): boolean;          // O(1), one direction
+  areConnected(userAId: string, userBId: string): boolean;  // O(1), either direction
+  friendsOf(userId: string): ReadonlySet<string>;
+  degree(userId: string): number;
+  mutualFriends(userAId: string, userBId: string): string[];             // set intersection, O(min(deg))
+  partition<T extends { id: string }>(viewerId: string, candidates: Iterable<T>): { friends: T[]; others: T[] };
+  suggestFriends(userId: string, options?: { maxDepth?: number }): FriendSuggestion[]; // BFS, O(V + E)
+}
+
+/** @module lib/collections/queue — FIFO queue, amortized O(1) enqueue/dequeue (head pointer + compaction). */
+export class Queue<T> { enqueue(item: T): void; dequeue(): T | undefined; peek(): T | undefined; size: number; isEmpty(): boolean; }
+```
+
+**Why:** friendship was checked with `friendIds.includes(...)` scattered across five privacy rules, some checking only the viewer's list and others accepting either direction. The graph centralizes those checks in one structure with `O(1)` set lookups.
+
+**Directed edges preserve each rule's exact semantics:**
+
+| Privacy rule (`apps/web/src/lib/permissions/policies.ts`) | Before | After |
 | --- | --- | --- |
-| `FriendshipGraph` (`lib/social/`) | Directed adjacency list `Map<userId, Set<userId>>` | `O(1)` edge check; one-way and either-way variants preserving current semantics |
-| Friends page partition | Graph neighbor set | Set partition (friends vs. non-friends) |
-| Mutual friends | Neighbor sets | Set intersection |
-| `FRIENDS` events, `MY_NETWORK` groups, roster reveal, friends-going | Graph | Edge / 1-hop reachability checks replacing inline `friendIds.includes` |
-| Friend-of-friend suggestions | Graph + FIFO queue + visited set | Breadth-first search, depth 2 |
+| `FRIENDS` event visibility (`canViewEvent`) | viewer lists host **or** host lists viewer | `graph.areConnected(viewer, host)` |
+| `MY_NETWORK` group — friend of creator | viewer lists creator **or** creator lists viewer | `graph.areConnected(viewer, creator)` |
+| `MY_NETWORK` group — friend in group | viewer lists member | `graph.hasEdge(viewer, member)` |
+| Roster reveal + `isFriend` flags | viewer lists member | `graph.hasEdge(viewer, member)` |
+| `friendsGoing` on events | viewer lists attendee | `graph.hasEdge(viewer, attendee)` |
+
+`canViewEvent`, `canViewMoveGroup`, `projectEventForViewer`, `projectMoveGroupRoster`, and `projectMoveGroupForViewer` now take a `graph` argument instead of looking up host/creator `User` objects for their friend lists. `LocalMockSeshAdapter` builds one graph at construction and passes it to every projection. The unused `areFriends` helper was removed.
+
+**Friends page (`apps/web/src/app/friends/page.tsx`):**
+- Friends vs. other campus members → `graph.partition()`.
+- Each non-friend shows **"N mutual friends"** → `graph.mutualFriends()` via suggestions.
+- Non-friends are **ordered by friend-of-friend BFS** (`suggestFriends`, depth 3): most mutual friends first, then fewest hops. For Maya: Chloe (2 mutual, 2 hops) → Ramblin' Nights (1 mutual, 2 hops) → Tyler (0 mutual, 3 hops).
+
+**Verification:**
+- Behavior equivalence: every `listEvents`, `getEvent`, `listMoveGroups`, and `getMoveGroup` result for Guest + all 7 seed users was serialized on `Production` and on this branch — **byte-for-byte identical**.
+- `friendship-graph.test.ts` (9): queue FIFO + compaction, directed vs. undirected edges, unknown users, mutual friends, partition, depth-bounded BFS, ranking, and the seed network.
 
 ---
 

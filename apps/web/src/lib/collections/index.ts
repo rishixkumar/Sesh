@@ -1,3 +1,5 @@
+export { Queue } from "./queue";
+
 /**
  * Builds a unique-key hash index over `items`.
  *

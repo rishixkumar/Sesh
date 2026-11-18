@@ -14,6 +14,7 @@ import type {
   ViewerMoveGroupRelation,
   ViewerSession,
 } from "@/types/domain";
+import type { FriendshipGraph } from "@/lib/social/friendship-graph";
 
 /**
  * PROTOTYPE SECURITY NOTICE:
@@ -37,11 +38,6 @@ export function toPublicUserSummary(user: User): PublicUserSummary {
   };
 }
 
-export function areFriends(userA: User | null, userBId: string): boolean {
-  if (!userA) return false;
-  return userA.friendIds.includes(userBId);
-}
-
 /**
  * Determines whether `viewer` may see an event at all.
  * - CANCELLED events are hidden from lists.
@@ -53,7 +49,7 @@ export function areFriends(userA: User | null, userBId: string): boolean {
 export function canViewEvent(
   event: EventRecord,
   viewer: ViewerSession,
-  hostUser?: User
+  graph: FriendshipGraph
 ): boolean {
   if (event.status === "CANCELLED") return false;
 
@@ -69,11 +65,7 @@ export function canViewEvent(
     case "FRIENDS": {
       if (!viewerId) return false;
       if (viewerId === event.hostId) return true;
-      const viewerIsFriendOfHost =
-        viewer.mode === "MEMBER" &&
-        (viewer.user.friendIds.includes(event.hostId) ||
-          Boolean(hostUser?.friendIds.includes(viewerId)));
-      return viewerIsFriendOfHost;
+      return graph.areConnected(viewerId, event.hostId);
     }
     case "CUSTOM":
     case "INVITE_ONLY": {
@@ -136,13 +128,15 @@ export function projectEventForViewer(params: {
   event: EventRecord;
   viewer: ViewerSession;
   usersById: Map<string, User>;
+  graph: FriendshipGraph;
   responses: EventResponse[];
   eventMoveGroups: MoveGroupRecord[];
 }): EventView | null {
-  const { event, viewer, usersById, responses, eventMoveGroups } = params;
+  const { event, viewer, usersById, graph, responses, eventMoveGroups } =
+    params;
   const hostUser = usersById.get(event.hostId);
 
-  if (!canViewEvent(event, viewer, hostUser)) {
+  if (!canViewEvent(event, viewer, graph)) {
     return null;
   }
 
@@ -172,7 +166,7 @@ export function projectEventForViewer(params: {
 
   const activeGroups = eventMoveGroups.filter((g) => !g.disbanded);
   const visibleGroupCount = activeGroups.filter((group) =>
-    canViewMoveGroup(group, event, viewer, usersById)
+    canViewMoveGroup(group, event, viewer, graph)
   ).length;
 
   const viewerInApprovedMoveGroup = Boolean(
@@ -190,7 +184,7 @@ export function projectEventForViewer(params: {
   const friendsGoing: PublicUserSummary[] =
     viewer.mode === "MEMBER"
       ? goingResponses
-          .filter((r) => viewer.user.friendIds.includes(r.userId))
+          .filter((r) => graph.hasEdge(viewer.user.id, r.userId))
           .map((r) => usersById.get(r.userId))
           .filter((u): u is User => Boolean(u))
           .map(toPublicUserSummary)
@@ -275,13 +269,12 @@ export function canViewMoveGroup(
   group: MoveGroupRecord,
   event: EventRecord | undefined,
   viewer: ViewerSession,
-  usersById: Map<string, User>
+  graph: FriendshipGraph
 ): boolean {
   if (group.disbanded) return false;
   if (!event) return false;
 
-  const hostUser = usersById.get(event.hostId);
-  if (!canViewEvent(event, viewer, hostUser)) return false;
+  if (!canViewEvent(event, viewer, graph)) return false;
 
   const viewerId = viewer.mode === "MEMBER" ? viewer.user.id : null;
   const isMemberOrCreator = Boolean(
@@ -296,12 +289,13 @@ export function canViewMoveGroup(
       return true;
     case "MY_NETWORK": {
       if (viewer.mode !== "MEMBER") return false;
-      const creator = usersById.get(group.creatorId);
-      const isFriendWithCreator =
-        viewer.user.friendIds.includes(group.creatorId) ||
-        Boolean(creator?.friendIds.includes(viewer.user.id));
+      const viewerUserId = viewer.user.id;
+      const isFriendWithCreator = graph.areConnected(
+        viewerUserId,
+        group.creatorId
+      );
       const hasFriendInGroup = group.members.some((m) =>
-        viewer.user.friendIds.includes(m.userId)
+        graph.hasEdge(viewerUserId, m.userId)
       );
       return isFriendWithCreator || hasFriendInGroup;
     }
@@ -328,8 +322,10 @@ export function projectMoveGroupRoster(params: {
   group: MoveGroupRecord;
   viewer: ViewerSession;
   usersById: Map<string, User>;
+  graph: FriendshipGraph;
 }): MoveGroupRosterProjection {
-  const { group, viewer, usersById } = params;
+  const { group, viewer, usersById, graph } = params;
+  const viewerId = viewer.mode === "MEMBER" ? viewer.user.id : null;
   const creatorUser = usersById.get(group.creatorId);
   const creatorSummary: PublicUserSummary = creatorUser
     ? toPublicUserSummary(creatorUser)
@@ -359,18 +355,15 @@ export function projectMoveGroupRoster(params: {
       continue;
     }
 
-    const isFriend =
-      viewer.mode === "MEMBER" &&
-      (viewer.user.friendIds.includes(member.userId) ||
-        viewer.user.id === member.userId);
+    const isViewerFriend = Boolean(
+      viewerId && graph.hasEdge(viewerId, member.userId)
+    );
+    const isFriendOrSelf = isViewerFriend || viewerId === member.userId;
 
-    if (isAcceptedMember || isFriend) {
+    if (isAcceptedMember || isFriendOrSelf) {
       visibleMembers.push({
         ...toPublicUserSummary(memberUser),
-        isFriend: Boolean(
-          viewer.mode === "MEMBER" &&
-            viewer.user.friendIds.includes(member.userId)
-        ),
+        isFriend: isViewerFriend,
         joinedAt: member.joinedAt,
       });
     } else {
@@ -393,13 +386,14 @@ export function projectMoveGroupForViewer(params: {
   event: EventRecord | undefined;
   viewer: ViewerSession;
   usersById: Map<string, User>;
+  graph: FriendshipGraph;
 }): MoveGroupView | null {
-  const { group, event, viewer, usersById } = params;
-  if (!event || !canViewMoveGroup(group, event, viewer, usersById)) {
+  const { group, event, viewer, usersById, graph } = params;
+  if (!event || !canViewMoveGroup(group, event, viewer, graph)) {
     return null;
   }
 
-  const roster = projectMoveGroupRoster({ group, viewer, usersById });
+  const roster = projectMoveGroupRoster({ group, viewer, usersById, graph });
   const relation = getViewerMoveGroupRelation(group, viewer);
   const isAcceptedMember = relation === "CREATOR" || relation === "MEMBER";
   const canManage =
@@ -468,10 +462,7 @@ export function projectMoveGroupForViewer(params: {
           if (!u) return null;
           return {
             ...toPublicUserSummary(u),
-            isFriend: Boolean(
-              viewer.mode === "MEMBER" &&
-                viewer.user.friendIds.includes(m.userId)
-            ),
+            isFriend: graph.hasEdge(viewer.user.id, m.userId),
             joinedAt: m.joinedAt,
           };
         })
