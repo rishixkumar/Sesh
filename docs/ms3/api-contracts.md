@@ -1,4 +1,4 @@
-# SESH Milestone 3 — Shared API Contracts (Planning)
+# SESH Milestone 3 — Shared API Contracts
 
 **Status:** FROZEN (2026-11-18)  
 **Decisions:** `docs/ms3/contract-decisions.md`  
