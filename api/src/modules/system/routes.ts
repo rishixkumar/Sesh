@@ -21,11 +21,21 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
+  app.get("/session", async (request) => ({
+    user: request.authUser
+      ? {
+          id: request.authUser.id,
+          schoolId: request.authUser.schoolId,
+        }
+      : null,
+  }));
+
   app.get(
     "/protected",
     { preHandler: requireAuth },
     async (request) => ({
       userId: request.authUser?.id ?? null,
+      schoolId: request.authUser?.schoolId ?? null,
     }),
   );
 }
