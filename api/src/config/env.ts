@@ -28,6 +28,14 @@ const envSchema = z.object({
     .min(1)
     .optional()
     .default("postgres://sesh:sesh@127.0.0.1:5433/sesh_test"),
+}).superRefine((value, ctx) => {
+  if (value.NODE_ENV === "production" && value.AUTH_MODE === "test") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["AUTH_MODE"],
+      message: "AUTH_MODE=test cannot be used when NODE_ENV=production",
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

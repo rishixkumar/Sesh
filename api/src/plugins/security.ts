@@ -14,10 +14,6 @@ async function securityPlugin(app: FastifyInstance): Promise<void> {
     max: 200,
     timeWindow: "1 minute",
   });
-
-  app.addHook("onRequest", async (request) => {
-    request.authUser = null;
-  });
 }
 
 export default fp(securityPlugin, {

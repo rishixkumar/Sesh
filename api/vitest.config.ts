@@ -25,6 +25,8 @@ export default defineConfig({
           name: "db",
           environment: "node",
           include: ["tests/db/**/*.test.ts"],
+          // Keep database cases in tests/db/integration.test.ts. A second
+          // file truncating sesh_test deadlocks against this suite.
           testTimeout: 30_000,
           hookTimeout: 60_000,
         },

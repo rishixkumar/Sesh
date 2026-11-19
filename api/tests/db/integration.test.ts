@@ -4,6 +4,9 @@
  */
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 
+import { buildApp } from "../../src/app.js";
+import { applySeeds } from "../../src/db/seeds/apply.js";
+import { SEED_SCHOOL_ID, SEED_USER_IDS } from "../../src/db/seeds/ids.js";
 import {
   closeHarness,
   createHarness,
@@ -583,4 +586,98 @@ describeDb("Phase 2 database integration", () => {
     },
     30_000,
   );
+
+  // --- AUTH_MODE=test identity (same file so truncate stays serialized) ---
+
+  async function withTestAuthApp(
+    run: (app: Awaited<ReturnType<typeof buildApp>>) => Promise<void>,
+  ): Promise<void> {
+    const app = await buildApp({
+      env: {
+        NODE_ENV: "test",
+        LOG_LEVEL: "silent",
+        HOST: "127.0.0.1",
+        PORT: "4000",
+        WEB_ORIGIN: "http://localhost:3000",
+        AUTH_MODE: "test",
+        DATABASE_URL: harness.url,
+      },
+      logger: false,
+    });
+    try {
+      await run(app);
+    } finally {
+      await app.close();
+    }
+  }
+
+  it("sets test identity from the seeded user's primary school", async () => {
+    await applySeeds(harness.db);
+
+    await withTestAuthApp(async (app) => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/v1/protected",
+        headers: {
+          "x-sesh-test-user-id": SEED_USER_IDS.maya,
+          "x-sesh-test-school-id": "00000000-0000-4000-8000-000000000099",
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        userId: SEED_USER_IDS.maya,
+        schoolId: SEED_SCHOOL_ID,
+      });
+    });
+  });
+
+  it("returns 401 for an unknown test user", async () => {
+    await withTestAuthApp(async (app) => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/v1/session",
+        headers: {
+          "x-sesh-test-user-id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+    });
+  });
+
+  it("returns 401 when the test user has no primary school", async () => {
+    const user = await insertUser(harness.db, { primarySchoolId: null });
+
+    await withTestAuthApp(async (app) => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/v1/protected",
+        headers: { "x-sesh-test-user-id": user.id },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+    });
+  });
+
+  it("returns 401 for an inactive test user", async () => {
+    const school = await insertSchool(harness.db);
+    const user = await insertUser(harness.db, {
+      primarySchoolId: school.id,
+      status: "SUSPENDED",
+    });
+
+    await withTestAuthApp(async (app) => {
+      const response = await app.inject({
+        method: "GET",
+        url: "/v1/protected",
+        headers: { "x-sesh-test-user-id": user.id },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json().error.code).toBe("UNAUTHENTICATED");
+    });
+  });
 });

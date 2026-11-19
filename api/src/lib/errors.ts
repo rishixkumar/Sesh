@@ -10,6 +10,32 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
+/**
+ * Machine-readable `details.reason` values that are safe to return in every
+ * environment. Feature agents must use these strings and no others.
+ */
+export const PUBLIC_ERROR_REASONS = [
+  "CAPACITY_FULL",
+  "DUPLICATE_MEMBERSHIP",
+  "DUPLICATE_REQUEST",
+  "IDEMPOTENCY_KEY_REUSED",
+  "INVITE_ONLY",
+  "JOIN_DECLINED",
+  "CROSS_CAMPUS",
+  "TRANSFER_TARGET_NOT_MEMBER",
+] as const;
+
+export type PublicErrorReason = (typeof PUBLIC_ERROR_REASONS)[number];
+
+export function isPublicErrorReason(
+  value: unknown,
+): value is PublicErrorReason {
+  return (
+    typeof value === "string" &&
+    (PUBLIC_ERROR_REASONS as readonly string[]).includes(value)
+  );
+}
+
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
   UNAUTHENTICATED: 401,
@@ -47,6 +73,23 @@ export type ErrorResponseBody = {
   };
 };
 
+function stablePublicReason(error: AppError): PublicErrorReason | undefined {
+  if (error.code !== "CONFLICT" && error.code !== "FORBIDDEN") {
+    return undefined;
+  }
+
+  if (
+    error.details === null ||
+    typeof error.details !== "object" ||
+    !("reason" in error.details)
+  ) {
+    return undefined;
+  }
+
+  const reason = (error.details as { reason: unknown }).reason;
+  return isPublicErrorReason(reason) ? reason : undefined;
+}
+
 export function toErrorResponse(
   error: AppError,
   requestId: string,
@@ -59,6 +102,12 @@ export function toErrorResponse(
       requestId,
     },
   };
+
+  const reason = stablePublicReason(error);
+  if (reason) {
+    body.error.details = { reason };
+    return body;
+  }
 
   if (includeDetails && error.details !== undefined) {
     body.error.details = error.details;

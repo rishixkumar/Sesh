@@ -5,6 +5,7 @@ import { type Env, loadEnv } from "./config/env.js";
 import { createDb, type Database, type DbHandle } from "./db/client.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { systemRoutes } from "./modules/system/routes.js";
+import authPlugin from "./plugins/auth.js";
 import corsPlugin from "./plugins/cors.js";
 import errorsPlugin from "./plugins/errors.js";
 import securityPlugin from "./plugins/security.js";
@@ -103,6 +104,15 @@ export async function buildApp(
   await app.register(errorsPlugin);
   await app.register(securityPlugin);
   await app.register(corsPlugin);
+  // Identity runs before routes. Feature agents append registrars here,
+  // after authPlugin, and do not edit plugins/auth.ts:
+  //   await app.register(eventRoutes, { prefix: "/v1" });
+  //   await app.register(moveGroupRoutes, { prefix: "/v1" });
+  // Events own api/src/modules/events/**.
+  // Move Groups own api/src/modules/move-groups/**.
+  // Authorization policies live in api/src/modules/authorization/** and
+  // are called from those routes; they are not registered as HTTP routes.
+  await app.register(authPlugin);
 
   await app.register(healthRoutes);
 

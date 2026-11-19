@@ -1,8 +1,7 @@
 # SESH Milestone 3 — Test Plan (Planning)
 
-**Status:** Draft covering Phases 2–5 verification  
-**Scope:** Planning only — no new test implementations in this delivery  
-**Depends on:** `docs/ms3/api-contracts.md`, `web/MS3.md`, Phase 1 Vitest + Fastify inject patterns in `api/tests/`
+**Status:** Phase 3 HTTP expectations follow the FROZEN contract  
+**Depends on:** `docs/ms3/api-contracts.md`, `docs/ms3/contract-decisions.md`, `web/MS3.md`, Phase 1 Vitest + Fastify inject patterns in `api/tests/`
 
 Tests should prefer Fastify `inject`, disposable Postgres, and Playwright for browser E2E. Do not rely on a manually running `npm run dev` server except for explicit smoke checks.
 
