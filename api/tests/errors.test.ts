@@ -96,4 +96,34 @@ describe("error handling", () => {
 
     await app.close();
   });
+
+  it("returns CAPACITY_FULL in production without extra detail fields", async () => {
+    const app = await createTestApp({ NODE_ENV: "production" });
+
+    app.get("/full", async () => {
+      throw new AppError("CONFLICT", "This Move Group is full.", {
+        details: {
+          reason: "CAPACITY_FULL",
+          internal: "do-not-leak",
+        },
+      });
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/full",
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      error: {
+        code: "CONFLICT",
+        message: "This Move Group is full.",
+        requestId: expect.any(String),
+        details: { reason: "CAPACITY_FULL" },
+      },
+    });
+
+    await app.close();
+  });
 });
