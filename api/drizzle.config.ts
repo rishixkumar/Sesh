@@ -1,21 +1,20 @@
+import "dotenv/config";
+
 import { defineConfig } from "drizzle-kit";
 
 /**
- * Drizzle Kit config for future migration generation.
+ * Drizzle Kit config for versioned SQL migrations (MS3 §2.6).
  *
- * DO NOT run `drizzle-kit generate` / `migrate` / `push` until the managing
- * agent approves `src/db/schema/` (see SCHEMA_NOTES.md).
- *
- * Migrations agent owns: enabling PostGIS, generating SQL under
- * `src/db/migrations/`, Docker Compose, and DATABASE_URL wiring.
+ * Prefer `npm run db:generate` / `npm run db:migrate` over `drizzle-kit push`.
  */
 export default defineConfig({
   schema: "./src/db/schema/index.ts",
   out: "./src/db/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    // Placeholder — migrations agent must wire real credentials via env.
-    url: process.env.DATABASE_URL ?? "postgres://sesh:sesh@127.0.0.1:5432/sesh",
+    url:
+      process.env.DATABASE_URL ??
+      "postgres://sesh:sesh@127.0.0.1:5433/sesh",
   },
   strict: true,
   verbose: true,

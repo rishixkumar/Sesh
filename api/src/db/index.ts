@@ -1,8 +1,7 @@
 /**
  * Database module entrypoint.
  *
- * Phase 2 schema-only: re-exports the authoritative Drizzle schema.
- * Client (`drizzle(...)`), connection pool, and readiness probes are owned by
- * the migrations / DB foundation follow-up after schema approval.
+ * Re-exports the authoritative Drizzle schema and the connection helper.
  */
 export * from "./schema/index.js";
+export { createDb, type Database, type DbHandle, type CreateDbOptions } from "./client.js";

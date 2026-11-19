@@ -11,6 +11,23 @@ const envSchema = z.object({
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
   AUTH_MODE: z.enum(["disabled", "test", "managed"]).default("disabled"),
+  /**
+   * Primary application database URL (PostgreSQL + PostGIS).
+   * Required for readiness checks and future domain endpoints.
+   */
+  DATABASE_URL: z
+    .string()
+    .min(1)
+    .default("postgres://sesh:sesh@127.0.0.1:5433/sesh"),
+  /**
+   * Isolated database for automated DB tests (MS3 §2.1).
+   * Optional for the API process; used by test runners / drizzle against test DB.
+   */
+  DATABASE_URL_TEST: z
+    .string()
+    .min(1)
+    .optional()
+    .default("postgres://sesh:sesh@127.0.0.1:5433/sesh_test"),
 });
 
 export type Env = z.infer<typeof envSchema>;
