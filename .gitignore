@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# milestone notes (local only)
+MS3.md
+web/MS3.md
