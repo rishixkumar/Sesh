@@ -1,6 +1,8 @@
 # Sesh DB Schema Notes — Milestone 3 Phase 2 (Schema Only)
 
-**Status:** READY FOR APPROVAL — do **not** generate or apply migrations until the managing agent approves this schema.
+**Status:** APPROVED by managing agent (2026-11-18). Migrations, seeds, and DB tests may proceed on `MS3/P2-database-foundation`.
+
+**Approval notes:** Proceed with MS3 §2.2 entities as defined. Defer invitation tokens + notifications tables. Keep consent/auth-provider enums as starters (adjustable in a later migration if product locks values). Prefer app-layer state transitions for now; add DB triggers only where constraints already require them. Cross-campus integrity triggers optional for this phase if `school_id` FKs + app checks are in place.
 
 **Branch:** `MS3/P2-database-foundation`  
 **ORM:** Drizzle ORM (`drizzle-orm`) + future `drizzle-kit` migrations  
