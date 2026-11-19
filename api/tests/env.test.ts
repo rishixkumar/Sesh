@@ -23,4 +23,23 @@ describe("environment configuration", () => {
       }),
     ).toThrow(/Invalid environment configuration/);
   });
+
+  it("rejects AUTH_MODE=test when NODE_ENV is production", () => {
+    expect(() =>
+      loadEnv({
+        NODE_ENV: "production",
+        AUTH_MODE: "test",
+      }),
+    ).toThrow(/AUTH_MODE=test cannot be used when NODE_ENV=production/);
+  });
+
+  it("allows AUTH_MODE=disabled in production", () => {
+    const env = loadEnv({
+      NODE_ENV: "production",
+      AUTH_MODE: "disabled",
+    });
+
+    expect(env.AUTH_MODE).toBe("disabled");
+    expect(env.NODE_ENV).toBe("production");
+  });
 });
